@@ -12,6 +12,7 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
+            overflow-x: hidden; /* Prevent horizontal scrollbar from resize handle temporarily appearing */
         }
         /* Custom styles for color input to ensure it's visible */
         input[type="color"]::-webkit-color-swatch-wrapper {
@@ -48,6 +49,26 @@
             border-top: 3px dashed #4F46E5 !important; /* Indigo dashed border for tier reorder target */
             border-bottom: 3px dashed #4F46E5 !important;
        }
+       .resize-handle {
+            position: absolute;
+            right: -5px; /* Position slightly outside for easier grabbing */
+            top: 0;
+            width: 10px;
+            height: 100%;
+            cursor: col-resize;
+            z-index: 50; /* Ensure it's on top */
+        }
+        .resize-handle-visual {
+            width: 4px; /* Visual part of the handle */
+            height: 100%;
+            background-color: #4B5563; /* gray-600 */
+            border-radius: 2px;
+            position: absolute;
+            right: 3px; /* Center the visual part */
+        }
+        .dark .resize-handle-visual {
+            background-color: #6B7280; /* gray-500 for dark mode */
+        }
     </style>
 </head>
 <body>
@@ -68,30 +89,53 @@
         const ChevronDownIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m6 9 6 6 6-6"/></svg>;
         const SettingsIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>;
         const FileTextIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>;
-
-
-        const serializeState = (tiers, items, tierListTitle, itemWidth, itemHeight) => encodeURIComponent(JSON.stringify({ tiers, items, tierListTitle, itemWidth, itemHeight }));
+        const RotateCcwIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>;
         
-        const deserializeState = (encodedState) => {
-          if (!encodedState) return { data: null, error: null };
-          try {
-            const data = JSON.parse(decodeURIComponent(encodedState));
-            if (data && Array.isArray(data.tiers) && Array.isArray(data.items)) {
-              const validItems = data.items.map(item => ({ ...item, tierId: data.tiers.some(t => t.id === item.tierId) ? item.tierId : null }));
-              const validTiers = data.tiers.map(tier => ({ ...tier, items: Array.isArray(tier.items) ? tier.items.filter(id => validItems.some(i => i.id === id)) : [] }));
-              return { 
-                data: { 
-                    tiers: validTiers, 
-                    items: validItems, 
-                    tierListTitle: data.tierListTitle,
-                    itemWidth: data.itemWidth || 80, // Default if not present
-                    itemHeight: data.itemHeight || 80 // Default if not present
-                }, error: null 
-              };
+        const serializeState = (stateData) => {
+            try {
+                const jsonString = JSON.stringify(stateData);
+                return encodeURIComponent(jsonString);
+            } catch (error) {
+                console.error("Error serializing state:", error);
+                return ""; // Return empty string or handle error as appropriate
             }
-            return { data: null, error: { message: "Invalid URL state format.", type: "warning" } };
+        };
+        
+        const deserializeState = (encodedStringFromHash) => {
+          if (!encodedStringFromHash) return { data: null, error: null };
+          try {
+            const jsonString = decodeURIComponent(encodedStringFromHash);
+            const parsedData = JSON.parse(jsonString);
+            
+            if (parsedData && Array.isArray(parsedData.tiers) && Array.isArray(parsedData.items)) {
+                const validatedData = {
+                    ...parsedData,
+                    tiers: parsedData.tiers.map(tier => ({ // Ensure items array exists for each tier
+                        ...tier,
+                        items: Array.isArray(tier.items) ? tier.items : []
+                    })),
+                    itemWidth: parsedData.itemWidth || 80,
+                    itemHeight: parsedData.itemHeight || 80,
+                    containerWidth: parsedData.containerWidth || 1280,
+                    itemPoolTitle: parsedData.itemPoolTitle || "Item Pool"
+                };
+                // Further validation for item tierIds
+                validatedData.items = validatedData.items.map(item => ({
+                     ...item,
+                     tierId: validatedData.tiers.some(t => t.id === item.tierId) ? item.tierId : null
+                }));
+                // Ensure tier.items only contains valid item IDs
+                 validatedData.tiers = validatedData.tiers.map(tier => ({
+                    ...tier,
+                    items: tier.items.filter(itemId => validatedData.items.some(i => i.id === itemId))
+                }));
+
+
+                return { data: validatedData, error: null };
+            }
+            return { data: null, error: { message: "Invalid state structure after parsing.", type: "warning" } };
           } catch (e) {
-            return { data: null, error: { message: `Error parsing URL: ${e.message}`, type: "error" } };
+            return { data: null, error: { message: `Error parsing or decoding URL state: ${e.message}`, type: "error" } };
           }
         };
 
@@ -110,9 +154,20 @@
           ]);
           const [items, setItems] = useState(initialData?.items || []);
           const [tierListTitle, setTierListTitle] = useState(initialData?.tierListTitle || 'My Tier List');
+          const [itemPoolTitle, setItemPoolTitle] = useState(initialData?.itemPoolTitle || 'Item Pool'); 
           const [itemWidth, setItemWidth] = useState(initialData?.itemWidth || 80);
           const [itemHeight, setItemHeight] = useState(initialData?.itemHeight || 80);
+          const [containerWidth, setContainerWidth] = useState(initialData?.containerWidth || 1280); 
+          const [isResizing, setIsResizing] = useState(false);
           
+          const appContainerRef = useRef(null);
+          const resizeDragStartRef = useRef({ x: 0, width: 0 });
+          const isResizingRef = useRef(isResizing); 
+
+          useEffect(() => {
+            isResizingRef.current = isResizing; 
+          }, [isResizing]);
+
           useEffect(() => {
             if (initialDeserializedResult.error) {
               addLog(initialDeserializedResult.error.message, initialDeserializedResult.error.type);
@@ -128,7 +183,7 @@
           const [draggedItemId, setDraggedItemId] = useState(null);
           const [draggedTierId, setDraggedTierId] = useState(null);
           const [showConfiguration, setShowConfiguration] = useState(true);
-          const [showLogs, setShowLogs] = useState(false); // Kept separate for now, will move under config later
+          const [showLogs, setShowLogs] = useState(false);
           const [draggedOverItemId, setDraggedOverItemId] = useState(null);
           const [draggedOverTierRowId, setDraggedOverTierRowId] = useState(null);
           const [draggedOverTierAreaId, setDraggedOverTierAreaId] = useState(null);
@@ -145,12 +200,23 @@
           const standardColors = ['#ff7f7f', '#ffbf7f', '#ffff7f', '#bfff7f', '#7fbfff', '#bf7fff', '#c0c0c0', '#404040'];
 
           useEffect(() => { document.documentElement.classList.toggle('dark', darkMode); document.body.classList.toggle('bg-black', darkMode); document.body.classList.toggle('bg-gray-100', !darkMode); }, [darkMode]);
-          useEffect(() => { const id = setTimeout(() => { window.location.hash = serializeState(tiers, items, tierListTitle, itemWidth, itemHeight); }, 700); return () => clearTimeout(id); }, [tiers, items, tierListTitle, itemWidth, itemHeight]);
+          
+          useEffect(() => { 
+            const stateToSave = { tiers, items, tierListTitle, itemWidth, itemHeight, containerWidth, itemPoolTitle }; 
+            const hashString = serializeState(stateToSave);
+            const id = setTimeout(() => { 
+                if (window.location.hash.substring(1) !== hashString) {
+                    window.location.hash = hashString; 
+                }
+            }, 700); 
+            return () => clearTimeout(id); 
+          }, [tiers, items, tierListTitle, itemWidth, itemHeight, containerWidth, itemPoolTitle]); 
+          
           const generateId = useCallback(() => crypto.randomUUID(), []);
 
           const handleAddTier = () => {
             const name = newTierNameRef.current.value.trim(); const file = newTierImageRef.current.files[0];
-            if (!name && !file) { alert("Tier name or image required."); addLog("Add tier: empty.", "warning"); return; }
+            if (!name && !file) { addLog("Tier name or image required.", "warning"); return; }
             let newTier = { id: generateId(), items: [], color: newTierColor };
             if (file) {
               const reader = new FileReader();
@@ -162,10 +228,10 @@
 
           const handleAddItem = () => {
             const name = newItemNameRef.current.value.trim(); const url = newItemImageUrlRef.current.value.trim(); const file = newItemImageFileRef.current.files[0];
-            if (!name && !url && !file) { alert("Item details required."); addLog("Add item: empty.", "warning"); return; }
+            if (!name && !url && !file) { addLog("Item details required.", "warning"); return; }
             let newItem = { id: generateId(), tierId: null };
             if (url) {
-              if (!url.startsWith('http')) { alert("Invalid URL."); addLog("Invalid item URL.", "error"); return; }
+              if (!url.startsWith('http')) { addLog("Invalid item URL.", "error"); return; }
               newItem.type = 'image'; newItem.value = url; setItems(p => [...p, newItem]); addLog("Added URL item.", "info");
             } else if (file) {
               const reader = new FileReader();
@@ -176,9 +242,15 @@
           };
 
           const handlePasteItems = () => {
-            const text = pasteItemsRef.current.value.trim(); if (!text) { alert("Paste area empty."); return; }
+            const text = pasteItemsRef.current.value.trim(); if (!text) { addLog("Paste area empty.", "warning"); return; }
             const newItems = text.split('\n').map(l => ({ id: generateId(), type: 'name', value: l.trim(), tierId: null })).filter(i => i.value);
             setItems(p => [...p, ...newItems]); addLog(`Pasted ${newItems.length} items.`, "info"); pasteItemsRef.current.value = '';
+          };
+
+          const handleResetAllItemsToPool = () => {
+            setItems(prevItems => prevItems.map(item => ({ ...item, tierId: null })));
+            setTiers(prevTiers => prevTiers.map(tier => ({ ...tier, items: [] })));
+            addLog("All items reset to pool.", "action");
           };
 
           const cleanupDragStates = () => { setDraggedItemId(null); setDraggedTierId(null); setDraggedOverItemId(null); setDraggedOverTierRowId(null); setDraggedOverTierAreaId(null); addLog("Drag End: States cleaned.", "debug"); };
@@ -315,7 +387,7 @@
             const save = (val, type, col) => { setTiers(p => p.map(t => t.id === editingTierId ? { ...t, value: val, type: type, color: col } : t)); addLog(`Saved tier ${editingTierId}`, "action"); cancelEditingTier();};
             if (editTierImageUrlRef.current.value.trim()) { 
               const url = editTierImageUrlRef.current.value.trim();
-              if (!url.startsWith('http')) { alert("Invalid URL."); return; }
+              if (!url.startsWith('http')) { addLog("Invalid URL for tier edit.", "error"); return; }
               save(url, 'image', editingTierColor);
             } else if (editingTierImageFile) {
               const reader = new FileReader();
@@ -326,16 +398,98 @@
             } else { 
                 const currentTier = tiers.find(t => t.id === editingTierId);
                 if (currentTier && currentTier.type === 'image') save(currentTier.value, 'image', editingTierColor);
-                else alert("Label cannot be empty for text tiers.");
+                else addLog("Label cannot be empty for text tiers.", "warning");
             }
           };
           const cancelEditingTier = () => { setEditingTierId(null); setEditingTierLabel(''); setEditingTierColor('#888888'); setEditingTierImageUrl(''); setEditingTierImageFile(null); if(editTierImageFileRef.current) editTierImageFileRef.current.value=''; if(editTierImageUrlRef.current) editTierImageUrlRef.current.value=''; addLog("Edit tier cancelled.", "info"); };
           const unassignedItems = items.filter(item => item.tierId === null);
           const handleHexColorChange = (e, isEditing) => { const hex = e.target.value; if (/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(hex)) { if (isEditing) setEditingTierColor(hex); else setNewTierColor(hex); }};
-          const copyLogsToClipboard = () => { navigator.clipboard.writeText(logs.map(l => `[${l.timestamp}] [${l.type.toUpperCase()}] ${l.message}`).join('\n')).then(()=>alert("Logs copied!")).catch(()=>alert("Copy failed.")); addLog("Logs copied.", "info");};
-          const selectAllLogs = () => { const area = document.querySelector('.log-display-area'); if(area){ const r=document.createRange();r.selectNodeContents(area);const s=window.getSelection();s.removeAllRanges();s.addRange(r);alert("Logs selected!");} addLog("Logs selected.", "info");};
+          
+          const copyLogsToClipboard = () => { 
+            const logText = logs.map(l => `[${l.timestamp}] [${l.type.toUpperCase()}] ${l.message}`).join('\n');
+            if (logText) {
+                navigator.clipboard.writeText(logText)
+                  .then(()=> addLog("Logs copied to clipboard.", "info"))
+                  .catch(()=> addLog("Failed to copy logs. Please use 'Select All'.", "error"));
+            } else {
+                addLog("No logs to copy.", "info");
+            }
+          };
+          const selectAllLogs = () => { 
+            const area = document.querySelector('.log-display-area'); 
+            if(area && area.hasChildNodes()){ 
+              area.focus({preventScroll:true}); 
+              const r=document.createRange();r.selectNodeContents(area);const s=window.getSelection();s.removeAllRanges();s.addRange(r);
+              if (window.getSelection().rangeCount > 0 && window.getSelection().toString().length > 0) {
+                addLog("Logs selected. Press Ctrl+C or Cmd+C to copy.", "info");
+              } else {
+                addLog("Failed to select logs. Try again or copy manually.", "warning");
+              }
+            } else if (area) {
+              addLog("Log area is empty, nothing to select.", "info");
+            }
+            else {
+              addLog("Log display area not found for selection.", "warning");
+            }
+          };
 
           const theme = { bg: darkMode ? 'bg-black' : 'bg-gray-100', text: darkMode ? 'text-gray-100' : 'text-gray-900', containerBg: darkMode ? 'bg-gray-900' : 'bg-white', inputBg: darkMode ? 'bg-gray-700' : 'bg-gray-50', inputText: darkMode ? 'text-gray-100' : 'text-gray-900', placeholderText: darkMode ? 'placeholder-gray-400' : 'placeholder-gray-500', borderColor: darkMode ? 'border-gray-700' : 'border-gray-300', buttonPrimaryBg: darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600', buttonSecondaryBg: darkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-500 hover:bg-gray-600', buttonText: 'text-white', sectionBg: darkMode ? 'bg-gray-800' : 'bg-gray-50', };
+          
+          // --- Resize Handlers ---
+          const handleResizeMouseDown = (e) => {
+            e.preventDefault();
+            setIsResizing(true);
+            resizeDragStartRef.current = {
+                x: e.clientX,
+                width: appContainerRef.current ? appContainerRef.current.offsetWidth : containerWidth 
+            };
+            addLog("Resize Start", "action");
+          };
+
+          const mouseMoveHandlerRef = useRef();
+          const mouseUpHandlerRef = useRef();
+
+          useEffect(() => {
+            mouseMoveHandlerRef.current = (e) => {
+                if (!isResizingRef.current) return; 
+                addLog("Resize Mouse Move", "debug"); 
+                const { x: initialX, width: initialWidth } = resizeDragStartRef.current;
+                const dx = e.clientX - initialX;
+                let newWidth = initialWidth + dx;
+                const maxWidth = window.innerWidth * 0.95; 
+                const minWidth = 600; 
+                newWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));
+                setContainerWidth(newWidth);
+            };
+
+            mouseUpHandlerRef.current = () => {
+                if (!isResizingRef.current) return; 
+                setIsResizing(false); 
+                if (appContainerRef.current) { 
+                    addLog(`Resize End: New width ${appContainerRef.current.offsetWidth}px`, "action");
+                } else {
+                    addLog(`Resize End: New width ${containerWidth}px (from state)`, "action");
+                }
+            };
+          }); 
+
+          useEffect(() => {
+            const handleMove = e => mouseMoveHandlerRef.current(e);
+            const handleUp = () => mouseUpHandlerRef.current();
+
+            if (isResizing) {
+                document.addEventListener('mousemove', handleMove);
+                document.addEventListener('mouseup', handleUp);
+                addLog("Resize listeners ADDED", "debug");
+            }
+            
+            return () => {
+                document.removeEventListener('mousemove', handleMove);
+                document.removeEventListener('mouseup', handleUp);
+                addLog("Resize listeners CLEANED UP", "debug");
+            };
+          }, [isResizing]); 
+
 
           const renderItem = (item) => ( 
             <div
@@ -363,9 +517,12 @@
           );
 
           return (
-            // Removed max-w-7xl and mx-auto for full width
             <div className={`min-h-screen font-sans p-0 transition-colors duration-300 ${theme.bg} ${theme.text}`}>
-              <div> 
+              <div 
+                ref={appContainerRef}
+                className="relative mx-auto" 
+                style={{ width: `${containerWidth}px` }}
+              > 
                 <div className={`flex justify-between items-center p-4 ${theme.containerBg}`}>
                   <input type="text" value={tierListTitle} onChange={(e) => setTierListTitle(e.target.value)} className={`text-3xl sm:text-4xl font-extrabold bg-transparent border-none focus:outline-none focus:ring-0 text-left w-full mr-4 ${theme.text}`} />
                   <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`}> {darkMode ? <SunIcon size={24} /> : <MoonIcon size={24} />} </button>
@@ -403,7 +560,7 @@
                           onDrop={(e) => { addLog(`TIER AREA onDrop: Tier ${tier.id}, BeforeItem=null`, "event"); handleItemDrop(e, tier.id, null);}}
                           className={`flex-grow p-2 flex flex-wrap gap-2 items-start justify-start min-h-[100px] ${theme.containerBg} 
                             ${draggedOverTierAreaId === tier.id && draggedItemId && !draggedOverItemId ? 'drag-over-tier-area' : ''}`}
-                        > {/* Added gap-2 for item spacing */}
+                        > 
                           {tier.items.map(itemId => { const item = items.find(i => i.id === itemId); return item ? renderItem(item) : null; })}
                           {tier.items.length === 0 && <p className={`${darkMode ? 'text-gray-500' : 'text-gray-400'} text-sm italic p-4 pointer-events-none`}>Drag items here...</p>}
                         </div>
@@ -419,8 +576,10 @@
                     className={`p-4 min-h-[150px] flex flex-col w-full ${theme.containerBg} ${theme.borderColor} border-t
                       ${draggedOverTierAreaId === null && draggedItemId ? 'drag-over-tier-area' : ''}`}
                   >
-                    <h2 className={`text-xl font-semibold ${theme.text} mb-3 flex items-center justify-center gap-2`}> <GripVerticalIcon size={20} /> Item Pool </h2>
-                    <div className="flex flex-wrap gap-2 justify-center sm:justify-start flex-grow min-h-[100px]"> {/* Added gap-2 */}
+                    <h2 className={`text-xl font-semibold ${theme.text} mb-3 flex items-center justify-center gap-2`}> 
+                        <GripVerticalIcon size={20} /> {itemPoolTitle} {/* Use state for item pool title */}
+                    </h2>
+                    <div className="flex flex-wrap gap-2 justify-center sm:justify-start flex-grow min-h-[100px]"> 
                       {unassignedItems.length === 0 ? <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'} text-sm text-center w-full`}>Add or drag items here.</p> : unassignedItems.map(item => renderItem(item))}
                     </div>
                   </div>
@@ -434,18 +593,35 @@
                   </h2>
                   {showConfiguration && (
                     <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6"> {/* Added mb-6 */}
-                      {/* Item Dimensions Settings */}
-                       <div className={`${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor}`}>
-                            <h3 className={`text-xl font-semibold ${darkMode ? 'text-purple-300':'text-purple-600'} mb-2 flex items-center gap-2`}> <SettingsIcon size={20}/> Item Dimensions</h3>
-                            <div className="flex flex-col gap-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6"> 
+                       <div className={`${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor} md:col-span-2 lg:col-span-3`}>
+                            <h3 className={`text-xl font-semibold ${darkMode ? 'text-purple-300':'text-purple-600'} mb-3 flex items-center gap-2`}> <SettingsIcon size={20}/> General Settings</h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 <div>
-                                    <label htmlFor="itemWidth" className={`block text-sm font-medium ${theme.inputText}`}>Width (px):</label>
+                                    <label htmlFor="itemWidth" className={`block text-sm font-medium ${theme.inputText}`}>Item Width (px):</label>
                                     <input type="number" id="itemWidth" value={itemWidth} onChange={e => setItemWidth(Math.max(20, parseInt(e.target.value) || 80))} className={`mt-1 p-2 w-full border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
                                 </div>
                                 <div>
-                                    <label htmlFor="itemHeight" className={`block text-sm font-medium ${theme.inputText}`}>Height (px):</label>
+                                    <label htmlFor="itemHeight" className={`block text-sm font-medium ${theme.inputText}`}>Item Height (px):</label>
                                     <input type="number" id="itemHeight" value={itemHeight} onChange={e => setItemHeight(Math.max(20, parseInt(e.target.value) || 80))} className={`mt-1 p-2 w-full border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                                </div>
+                                <div className="lg:col-span-1"> {/* Item Pool Title */}
+                                    <label htmlFor="itemPoolTitleInput" className={`block text-sm font-medium ${theme.inputText}`}>Item Pool Title:</label>
+                                    <input
+                                        type="text"
+                                        id="itemPoolTitleInput"
+                                        value={itemPoolTitle}
+                                        onChange={(e) => { setItemPoolTitle(e.target.value); addLog(`Item Pool title changed to: ${e.target.value}`, "info"); }}
+                                        className={`mt-1 p-2 w-full border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}
+                                    />
+                                </div>
+                                <div className="sm:col-span-2 lg:col-span-3 mt-2"> {/* Reset Button spanning more columns */}
+                                    <button
+                                        onClick={handleResetAllItemsToPool}
+                                        className={`w-full py-2 px-4 rounded-sm shadow-md flex items-center justify-center gap-2 ${darkMode ? 'bg-red-700 hover:bg-red-800' : 'bg-red-500 hover:bg-red-600'} ${theme.buttonText}`}
+                                    >
+                                       <RotateCcwIcon size={18}/> Reset All Items to Pool
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -491,7 +667,6 @@
                       </div>
                     </div>
                     
-                    {/* Application Logs Section - Moved under Configuration */}
                     <div className={`${theme.containerBg} p-0 w-full ${darkMode ? 'border-t border-gray-700' : 'border-t border-gray-300'} mt-4 pt-4`}>
                       <h3 className={`text-xl font-semibold ${theme.text} mb-3 text-center flex items-center justify-center gap-2`}>
                         <FileTextIcon size={20} /> Application Logs
@@ -511,7 +686,13 @@
                     </>
                   )}
                 </div>
-
+                {/* Resize Handle */}
+                <div 
+                    className="resize-handle"
+                    onMouseDown={handleResizeMouseDown}
+                >
+                    <div className="resize-handle-visual"></div>
+                </div>
               </div>
             </div>
           );
