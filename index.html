@@ -48,8 +48,6 @@
             border-top: 3px dashed #4F46E5 !important; /* Indigo dashed border for tier reorder target */
             border-bottom: 3px dashed #4F46E5 !important;
        }
-
-
     </style>
 </head>
 <body>
@@ -68,11 +66,12 @@
         const PencilIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>;
         const ChevronUpIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m18 15-6-6-6 6"/></svg>;
         const ChevronDownIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m6 9 6 6 6-6"/></svg>;
+        const SettingsIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>;
+        const FileTextIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>;
 
-        // Corrected serializeState function
-        const serializeState = (tiers, items, tierListTitle) => encodeURIComponent(JSON.stringify({ tiers, items, tierListTitle }));
+
+        const serializeState = (tiers, items, tierListTitle, itemWidth, itemHeight) => encodeURIComponent(JSON.stringify({ tiers, items, tierListTitle, itemWidth, itemHeight }));
         
-        // Modified deserializeState to return data and error separately
         const deserializeState = (encodedState) => {
           if (!encodedState) return { data: null, error: null };
           try {
@@ -80,7 +79,15 @@
             if (data && Array.isArray(data.tiers) && Array.isArray(data.items)) {
               const validItems = data.items.map(item => ({ ...item, tierId: data.tiers.some(t => t.id === item.tierId) ? item.tierId : null }));
               const validTiers = data.tiers.map(tier => ({ ...tier, items: Array.isArray(tier.items) ? tier.items.filter(id => validItems.some(i => i.id === id)) : [] }));
-              return { data: { tiers: validTiers, items: validItems, tierListTitle: data.tierListTitle }, error: null };
+              return { 
+                data: { 
+                    tiers: validTiers, 
+                    items: validItems, 
+                    tierListTitle: data.tierListTitle,
+                    itemWidth: data.itemWidth || 80, // Default if not present
+                    itemHeight: data.itemHeight || 80 // Default if not present
+                }, error: null 
+              };
             }
             return { data: null, error: { message: "Invalid URL state format.", type: "warning" } };
           } catch (e) {
@@ -93,7 +100,6 @@
           const [logs, setLogs] = useState([]);
           const addLog = useCallback((message, type = 'info') => setLogs(prev => [{ message, type, timestamp: new Date().toLocaleTimeString() }, ...prev].slice(0, 100)), []);
 
-          // Deserialize and handle initial data
           const initialDeserializedResult = deserializeState(window.location.hash.substring(1));
           const initialData = initialDeserializedResult.data;
 
@@ -104,13 +110,14 @@
           ]);
           const [items, setItems] = useState(initialData?.items || []);
           const [tierListTitle, setTierListTitle] = useState(initialData?.tierListTitle || 'My Tier List');
+          const [itemWidth, setItemWidth] = useState(initialData?.itemWidth || 80);
+          const [itemHeight, setItemHeight] = useState(initialData?.itemHeight || 80);
           
-          // Log deserialization errors/warnings after initial render
           useEffect(() => {
             if (initialDeserializedResult.error) {
               addLog(initialDeserializedResult.error.message, initialDeserializedResult.error.type);
             }
-          }, [initialDeserializedResult.error, addLog]); // addLog is stable
+          }, [initialDeserializedResult.error, addLog]);
 
           const [newTierColor, setNewTierColor] = useState('#888888');
           const [editingTierId, setEditingTierId] = useState(null);
@@ -121,12 +128,11 @@
           const [draggedItemId, setDraggedItemId] = useState(null);
           const [draggedTierId, setDraggedTierId] = useState(null);
           const [showConfiguration, setShowConfiguration] = useState(true);
-          const [showLogs, setShowLogs] = useState(false);
+          const [showLogs, setShowLogs] = useState(false); // Kept separate for now, will move under config later
           const [draggedOverItemId, setDraggedOverItemId] = useState(null);
           const [draggedOverTierRowId, setDraggedOverTierRowId] = useState(null);
           const [draggedOverTierAreaId, setDraggedOverTierAreaId] = useState(null);
 
-          // Corrected useRef declarations
           const newTierNameRef = useRef(null);
           const newTierImageRef = useRef(null);
           const newItemNameRef = useRef(null);
@@ -139,7 +145,7 @@
           const standardColors = ['#ff7f7f', '#ffbf7f', '#ffff7f', '#bfff7f', '#7fbfff', '#bf7fff', '#c0c0c0', '#404040'];
 
           useEffect(() => { document.documentElement.classList.toggle('dark', darkMode); document.body.classList.toggle('bg-black', darkMode); document.body.classList.toggle('bg-gray-100', !darkMode); }, [darkMode]);
-          useEffect(() => { const id = setTimeout(() => { window.location.hash = serializeState(tiers, items, tierListTitle); }, 700); return () => clearTimeout(id); }, [tiers, items, tierListTitle]);
+          useEffect(() => { const id = setTimeout(() => { window.location.hash = serializeState(tiers, items, tierListTitle, itemWidth, itemHeight); }, 700); return () => clearTimeout(id); }, [tiers, items, tierListTitle, itemWidth, itemHeight]);
           const generateId = useCallback(() => crypto.randomUUID(), []);
 
           const handleAddTier = () => {
@@ -307,7 +313,7 @@
             if (!editingTierId) return;
             let updatedValue = editingTierLabel.trim(); let updatedType = updatedValue.length === 1 ? 'letter' : 'name';
             const save = (val, type, col) => { setTiers(p => p.map(t => t.id === editingTierId ? { ...t, value: val, type: type, color: col } : t)); addLog(`Saved tier ${editingTierId}`, "action"); cancelEditingTier();};
-            if (editTierImageUrlRef.current.value.trim()) { // Use ref here
+            if (editTierImageUrlRef.current.value.trim()) { 
               const url = editTierImageUrlRef.current.value.trim();
               if (!url.startsWith('http')) { alert("Invalid URL."); return; }
               save(url, 'image', editingTierColor);
@@ -331,7 +337,7 @@
 
           const theme = { bg: darkMode ? 'bg-black' : 'bg-gray-100', text: darkMode ? 'text-gray-100' : 'text-gray-900', containerBg: darkMode ? 'bg-gray-900' : 'bg-white', inputBg: darkMode ? 'bg-gray-700' : 'bg-gray-50', inputText: darkMode ? 'text-gray-100' : 'text-gray-900', placeholderText: darkMode ? 'placeholder-gray-400' : 'placeholder-gray-500', borderColor: darkMode ? 'border-gray-700' : 'border-gray-300', buttonPrimaryBg: darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600', buttonSecondaryBg: darkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-500 hover:bg-gray-600', buttonText: 'text-white', sectionBg: darkMode ? 'bg-gray-800' : 'bg-gray-50', };
 
-          const renderItem = (item) => ( // Added item parameter
+          const renderItem = (item) => ( 
             <div
               key={item.id}
               draggable="true"
@@ -342,12 +348,13 @@
               onDrop={(e) => { addLog(`ITEM onDrop: Dragged ${draggedItemId} onto item ${item.id} (becomes beforeItemId) in tier ${item.tierId}`, "event"); handleItemDrop(e, item.tierId, item.id); }}
               onDragEnd={cleanupDragStates}
               data-item-id={item.id}
-              className={`relative flex items-center justify-center w-20 h-20 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-sm shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md transition-all duration-200 overflow-hidden group z-10 
+              style={{ width: `${itemWidth}px`, height: `${itemHeight}px` }}
+              className={`relative flex items-center justify-center bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-sm shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md transition-all duration-200 group z-10 
                 ${draggedItemId === item.id ? 'opacity-30 ring-2 ring-indigo-500' : ''}
                 ${draggedOverItemId === item.id && draggedItemId !== item.id ? 'drag-over-item' : ''}`}
             >
               {item.type === 'image' ? (
-                <img src={item.value} alt={item.value || "Item"} className="w-full h-full object-cover pointer-events-none" onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/64x64/FF0000/FFFFFF?text=Error`; e.target.alt = "Image failed"; addLog(`Failed image: ${item.value}`, "error"); }} />
+                <img src={item.value} alt={item.value || "Item"} className="w-full h-full object-contain pointer-events-none" onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/${itemWidth}x${itemHeight}/FF0000/FFFFFF?text=Error`; e.target.alt = "Image failed"; addLog(`Failed image: ${item.value}`, "error"); }} />
               ) : (
                 <span className="text-sm font-medium text-gray-800 dark:text-gray-200 text-center p-1 break-words pointer-events-none">{item.value}</span>
               )}
@@ -356,8 +363,9 @@
           );
 
           return (
+            // Removed max-w-7xl and mx-auto for full width
             <div className={`min-h-screen font-sans p-0 transition-colors duration-300 ${theme.bg} ${theme.text}`}>
-              <div className="max-w-7xl mx-auto">
+              <div> 
                 <div className={`flex justify-between items-center p-4 ${theme.containerBg}`}>
                   <input type="text" value={tierListTitle} onChange={(e) => setTierListTitle(e.target.value)} className={`text-3xl sm:text-4xl font-extrabold bg-transparent border-none focus:outline-none focus:ring-0 text-left w-full mr-4 ${theme.text}`} />
                   <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`}> {darkMode ? <SunIcon size={24} /> : <MoonIcon size={24} />} </button>
@@ -379,11 +387,11 @@
                         <div 
                           draggable="true"
                           onDragStart={(e) => handleTierLabelDragStart(e, tier.id)}
-                          onDragEnd={cleanupDragStates} // Moved DragEnd for tier label here
+                          onDragEnd={cleanupDragStates} 
                           className={`relative flex-shrink-0 w-24 sm:w-32 p-3 flex items-center justify-center text-center font-bold text-lg text-black group tier-label-draggable ${draggedTierId === tier.id ? 'tier-label-dragging' : ''}`}
                           style={{ backgroundColor: tier.color }}
                         >
-                          {tier.type === 'image' ? <img src={tier.value} alt="Tier" className="w-20 h-20 object-contain pointer-events-none" /> : <span className="pointer-events-none">{tier.value}</span>}
+                          {tier.type === 'image' ? <img src={tier.value} alt="Tier" className="w-full h-auto max-h-full object-contain pointer-events-none" /> : <span className="pointer-events-none">{tier.value}</span>}
                           <button onClick={() => handleDeleteTier(tier.id)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 z-10"> <Trash2Icon size={14} /> </button>
                           <button onClick={() => startEditingTier(tier)} className="absolute top-1 left-1 bg-gray-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 z-10"> <PencilIcon size={14} /> </button>
                         </div>
@@ -393,9 +401,9 @@
                           onDragOver={(e) => handleTierAreaDragOver(e, tier.id)}
                           onDragLeave={(e) => handleTierAreaDragLeave(e, tier.id)}
                           onDrop={(e) => { addLog(`TIER AREA onDrop: Tier ${tier.id}, BeforeItem=null`, "event"); handleItemDrop(e, tier.id, null);}}
-                          className={`flex-grow p-2 flex flex-wrap gap-1 items-start justify-start min-h-[100px] ${theme.containerBg} 
+                          className={`flex-grow p-2 flex flex-wrap gap-2 items-start justify-start min-h-[100px] ${theme.containerBg} 
                             ${draggedOverTierAreaId === tier.id && draggedItemId && !draggedOverItemId ? 'drag-over-tier-area' : ''}`}
-                        >
+                        > {/* Added gap-2 for item spacing */}
                           {tier.items.map(itemId => { const item = items.find(i => i.id === itemId); return item ? renderItem(item) : null; })}
                           {tier.items.length === 0 && <p className={`${darkMode ? 'text-gray-500' : 'text-gray-400'} text-sm italic p-4 pointer-events-none`}>Drag items here...</p>}
                         </div>
@@ -412,19 +420,37 @@
                       ${draggedOverTierAreaId === null && draggedItemId ? 'drag-over-tier-area' : ''}`}
                   >
                     <h2 className={`text-xl font-semibold ${theme.text} mb-3 flex items-center justify-center gap-2`}> <GripVerticalIcon size={20} /> Item Pool </h2>
-                    <div className="flex flex-wrap gap-1 justify-center sm:justify-start flex-grow min-h-[100px]">
+                    <div className="flex flex-wrap gap-2 justify-center sm:justify-start flex-grow min-h-[100px]"> {/* Added gap-2 */}
                       {unassignedItems.length === 0 ? <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'} text-sm text-center w-full`}>Add or drag items here.</p> : unassignedItems.map(item => renderItem(item))}
                     </div>
                   </div>
                 </div>
 
+                {/* Configuration Panel - Now contains Logs */}
                 <div className={`${theme.containerBg} p-4 w-full ${theme.borderColor} border-t`}>
                   <h2 className={`text-2xl font-bold ${theme.text} mb-4 text-center flex items-center justify-center gap-2`}>
-                    Configuration
+                    <SettingsIcon size={24} /> Configuration
                     <button onClick={() => setShowConfiguration(!showConfiguration)} className={`p-1 rounded-full ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-300 hover:bg-gray-400'}`}> {showConfiguration ? <ChevronUpIcon size={20} /> : <ChevronDownIcon size={20} />} </button>
                   </h2>
                   {showConfiguration && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6"> {/* Added mb-6 */}
+                      {/* Item Dimensions Settings */}
+                       <div className={`${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor}`}>
+                            <h3 className={`text-xl font-semibold ${darkMode ? 'text-purple-300':'text-purple-600'} mb-2 flex items-center gap-2`}> <SettingsIcon size={20}/> Item Dimensions</h3>
+                            <div className="flex flex-col gap-2">
+                                <div>
+                                    <label htmlFor="itemWidth" className={`block text-sm font-medium ${theme.inputText}`}>Width (px):</label>
+                                    <input type="number" id="itemWidth" value={itemWidth} onChange={e => setItemWidth(Math.max(20, parseInt(e.target.value) || 80))} className={`mt-1 p-2 w-full border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                                </div>
+                                <div>
+                                    <label htmlFor="itemHeight" className={`block text-sm font-medium ${theme.inputText}`}>Height (px):</label>
+                                    <input type="number" id="itemHeight" value={itemHeight} onChange={e => setItemHeight(Math.max(20, parseInt(e.target.value) || 80))} className={`mt-1 p-2 w-full border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                                </div>
+                            </div>
+                        </div>
+
+
                       {editingTierId ? (
                         <div className={`${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor}`}>
                           <h3 className={`text-xl font-semibold ${darkMode ? 'text-indigo-300':'text-indigo-600'} mb-2 flex items-center gap-2`}> <PencilIcon size={20}/> Edit Tier</h3>
@@ -464,24 +490,28 @@
                         <button onClick={handlePasteItems} className={`w-full py-2 ${darkMode?'bg-yellow-600 hover:bg-yellow-700':'bg-yellow-500 hover:bg-yellow-600'} ${theme.buttonText} rounded-sm`}>Add Pasted</button>
                       </div>
                     </div>
+                    
+                    {/* Application Logs Section - Moved under Configuration */}
+                    <div className={`${theme.containerBg} p-0 w-full ${darkMode ? 'border-t border-gray-700' : 'border-t border-gray-300'} mt-4 pt-4`}>
+                      <h3 className={`text-xl font-semibold ${theme.text} mb-3 text-center flex items-center justify-center gap-2`}>
+                        <FileTextIcon size={20} /> Application Logs
+                        <button onClick={()=>setShowLogs(!showLogs)} className={`p-1 rounded-full ${darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>{showLogs?<ChevronUpIcon size={18}/>:<ChevronDownIcon size={18}/>}</button>
+                      </h3>
+                      {showLogs && (<>
+                        <div className="flex gap-2 mb-3"> <button onClick={copyLogsToClipboard} className={`flex-1 py-1.5 px-3 rounded-sm ${darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>Copy</button> <button onClick={selectAllLogs} className={`flex-1 py-1.5 px-3 rounded-sm ${darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>Select All</button> </div>
+                        <div className={`log-display-area flex flex-col gap-1 ${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor} max-h-60 overflow-y-auto text-left`}>
+                          {logs.length === 0 ? <p className={`${darkMode?'text-gray-400':'text-gray-600'} text-sm`}>No logs.</p> : logs.map((l,i)=>(
+                            <p key={i} className={`text-xs font-mono ${l.type==='error'?(darkMode?'text-red-400':'text-red-600'):l.type==='warning'?(darkMode?'text-yellow-400':'text-yellow-600'):l.type==='action'?(darkMode?'text-blue-300':'text-blue-600'):l.type==='event'?(darkMode?'text-purple-300':'text-purple-600'):(darkMode?'text-gray-300':'text-gray-700')}`}>
+                              <span className={`${darkMode?'text-gray-500':'text-gray-400'}`}>{l.timestamp}</span> <span className={`font-bold ${l.type==='error'?(darkMode?'text-red-500':'text-red-700'):l.type==='warning'?(darkMode?'text-yellow-500':'text-yellow-700'):l.type==='action'?(darkMode?'text-blue-400':'text-blue-700'):l.type==='event'?(darkMode?'text-purple-400':'text-purple-700'):(darkMode?'text-gray-400':'text-gray-500')}`}>[{l.type.toUpperCase()}]</span> {l.message}
+                            </p>
+                          ))}
+                        </div></>
+                      )}
+                    </div>
+                    </>
                   )}
                 </div>
 
-                <div className={`${theme.containerBg} p-4 w-full ${theme.borderColor} border-t mt-4`}>
-                  <h2 className={`text-2xl font-bold ${theme.text} mb-4 text-center flex items-center justify-center gap-2`}>
-                    Logs <button onClick={()=>setShowLogs(!showLogs)} className={`p-1 rounded-full ${darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>{showLogs?<ChevronUpIcon size={20}/>:<ChevronDownIcon size={20}/>}</button>
-                  </h2>
-                  {showLogs && (<>
-                    <div className="flex gap-2 mb-3"> <button onClick={copyLogsToClipboard} className={`flex-1 py-1.5 px-3 rounded-sm ${darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>Copy</button> <button onClick={selectAllLogs} className={`flex-1 py-1.5 px-3 rounded-sm ${darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>Select All</button> </div>
-                    <div className={`log-display-area flex flex-col gap-1 ${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor} max-h-60 overflow-y-auto text-left`}>
-                      {logs.length === 0 ? <p className={`${darkMode?'text-gray-400':'text-gray-600'} text-sm`}>No logs.</p> : logs.map((l,i)=>(
-                        <p key={i} className={`text-xs font-mono ${l.type==='error'?(darkMode?'text-red-400':'text-red-600'):l.type==='warning'?(darkMode?'text-yellow-400':'text-yellow-600'):l.type==='action'?(darkMode?'text-blue-300':'text-blue-600'):l.type==='event'?(darkMode?'text-purple-300':'text-purple-600'):(darkMode?'text-gray-300':'text-gray-700')}`}>
-                          <span className={`${darkMode?'text-gray-500':'text-gray-400'}`}>{l.timestamp}</span> <span className={`font-bold ${l.type==='error'?(darkMode?'text-red-500':'text-red-700'):l.type==='warning'?(darkMode?'text-yellow-500':'text-yellow-700'):l.type==='action'?(darkMode?'text-blue-400':'text-blue-700'):l.type==='event'?(darkMode?'text-purple-400':'text-purple-700'):(darkMode?'text-gray-400':'text-gray-500')}`}>[{l.type.toUpperCase()}]</span> {l.message}
-                        </p>
-                      ))}
-                    </div></>
-                  )}
-                </div>
               </div>
             </div>
           );
