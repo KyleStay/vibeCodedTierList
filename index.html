@@ -92,7 +92,7 @@
 
         // --- UI COMPONENTS ---
 
-        const DraggableItem = memo(({ item, itemWidth, itemHeight, theme, draggedItemId, draggedOverItemId, handlers, addLog, deleteMode }) => (
+        const DraggableItem = memo(({ item, itemWidth, itemHeight, theme, draggedItemId, draggedOverItemId, handlers, addLog, deleteMode, finalizeMode }) => (
             <div
                 draggable="true"
                 onDragStart={(e) => handlers.handleItemDragStart(e, item.id)}
@@ -117,12 +117,12 @@
                         <span className={`text-sm font-medium ${theme.inputText} text-center p-1 break-all pointer-events-none`}>{item.value}</span>
                     )}
                 </div>
-                <button
+                {!finalizeMode && <button
                     onClick={() => handlers.handleDeleteItem(item.id)}
                     className={`absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 z-20 transition-opacity ${deleteMode ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                 >
                     <Trash2Icon size={14} />
-                </button>
+                </button>}
             </div>
         ));
 
@@ -140,15 +140,17 @@
                         ${index > 0 ? `${theme.borderColor} border-t` : ''}`}
                 >
                     <div
-                        draggable="true"
+                        draggable={!finalizeMode}
                         onDragStart={(e) => handlers.handleTierLabelDragStart(e, tier.id)}
                         onDragEnd={handlers.cleanupDragStates}
-                        className={`relative flex-shrink-0 p-3 flex items-center justify-center text-center font-bold text-lg text-black group tier-label-draggable ${draggedTierId === tier.id ? 'tier-label-dragging' : ''}`}
+                        className={`relative flex-shrink-0 p-3 flex items-center justify-center text-center font-bold text-lg text-black group ${!finalizeMode ? 'tier-label-draggable' : ''} ${draggedTierId === tier.id ? 'tier-label-dragging' : ''}`}
                         style={{ backgroundColor: tier.color, width: `${itemProps.tierLabelWidth}px` }}
                     >
                         {tier.type === 'image' ? <img src={tier.value} alt="Tier" className="w-full h-auto max-h-full object-contain pointer-events-none" /> : <span className="pointer-events-none">{tier.value}</span>}
-                        <button onClick={() => handlers.handleDeleteTier(tier.id)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 z-10"> <Trash2Icon size={14} /> </button>
-                        <button onClick={() => handlers.startEditingTier(tier)} className="absolute top-1 left-1 bg-gray-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 z-10"> <PencilIcon size={14} /> </button>
+                        {!finalizeMode && <>
+                            <button onClick={() => handlers.handleDeleteTier(tier.id)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 z-10"> <Trash2Icon size={14} /> </button>
+                            <button onClick={() => handlers.startEditingTier(tier)} className="absolute top-1 left-1 bg-gray-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 z-10"> <PencilIcon size={14} /> </button>
+                        </>}
                     </div>
                     <div
                         onDragEnter={(e) => handlers.handleTierAreaDragEnter(e, tier.id)}
@@ -158,7 +160,7 @@
                         className={`flex-grow p-2 flex flex-wrap gap-2 items-start justify-start min-h-[100px] ${theme.containerBg}
                             ${draggedOverTierAreaId === tier.id && draggedItemId && !draggedOverItemId ? 'drag-over-tier-area' : ''}`}
                     >
-                        {tierItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} />)}
+                        {tierItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} finalizeMode={finalizeMode} />)}
                         {tierItems.length === 0 && !finalizeMode && <p className={`${theme.darkMode ? 'text-gray-500' : 'text-gray-400'} text-sm italic p-4 pointer-events-none`}>Drag items here...</p>}
                     </div>
                 </div>
@@ -181,10 +183,10 @@
                     <h2 className={`text-xl font-semibold ${theme.text} mb-3 flex items-center justify-center gap-2`}><GripVerticalIcon size={20} /> {itemPoolTitle}</h2>
                     <div className="flex flex-wrap gap-2 justify-center sm:justify-start flex-grow min-h-[100px]">
                         {unassignedItems.length === 0 && !finalizeMode ? <p className={`${theme.darkMode ? 'text-gray-400' : 'text-gray-600'} text-sm text-center w-full`}>Add or drag items here.</p> :
-                            unassignedItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} />)
+                            unassignedItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} finalizeMode={finalizeMode} />)
                         }
                     </div>
-                    <button onClick={handlers.handleResetAllItemsToPool} className={`absolute bottom-4 right-4 w-12 h-12 rounded-full shadow-lg flex items-center justify-center ${theme.darkMode ? 'bg-red-700 hover:bg-red-800' : 'bg-red-500 hover:bg-red-600'} ${theme.buttonText}`}><RotateCcwIcon size={24}/></button>
+                    {!finalizeMode && <button onClick={handlers.handleResetAllItemsToPool} className={`absolute bottom-4 right-4 w-12 h-12 rounded-full shadow-lg flex items-center justify-center ${theme.darkMode ? 'bg-red-700 hover:bg-red-800' : 'bg-red-500 hover:bg-red-600'} ${theme.buttonText}`}><RotateCcwIcon size={24}/></button>}
                 </div>
             );
         };
@@ -602,15 +604,17 @@
                                 <button onClick={() => setFinalizeMode(!finalizeMode)} className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`}>
                                     {finalizeMode ? 'Edit' : 'Finalize'}
                                 </button>
-                                <button onClick={() => setContainerWidth(window.innerWidth)} className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`}>
-                                    Fit
-                                </button>
-                                <button onClick={toggleFullScreen} className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`}>
-                                    {isFullscreen ? <MinimizeIcon size={24} /> : <MaximizeIcon size={24} />}
-                                </button>
-                                <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`}>
-                                    {darkMode ? <SunIcon size={24} /> : <MoonIcon size={24} />}
-                                </button>
+                                {!finalizeMode && <>
+                                    <button onClick={() => setContainerWidth(window.innerWidth)} className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`}>
+                                        Fit
+                                    </button>
+                                    <button onClick={toggleFullScreen} className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`}>
+                                        {isFullscreen ? <MinimizeIcon size={24} /> : <MaximizeIcon size={24} />}
+                                    </button>
+                                    <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`}>
+                                        {darkMode ? <SunIcon size={24} /> : <MoonIcon size={24} />}
+                                    </button>
+                                </>}
                             </div>
                         </div>
 
