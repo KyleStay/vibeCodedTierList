@@ -14,70 +14,37 @@
             font-family: 'Inter', sans-serif;
             overflow-x: hidden; /* Prevent horizontal scrollbar from resize handle temporarily appearing */
         }
-        /* Custom styles for color input to ensure it's visible */
-        input[type="color"]::-webkit-color-swatch-wrapper {
-            padding: 0;
-        }
-        input[type="color"]::-webkit-color-swatch {
-            border: none;
-            border-radius: 0.125rem; /* rounded-sm */
-        }
-        input[type="color"] {
-            -webkit-appearance: none;
-            width: 2.5rem; /* w-10 */
-            height: 2.5rem; /* h-10 */
-            border: none;
-            background: none;
-            cursor: pointer;
-            border-radius: 0.125rem; /* rounded-sm */
-        }
-       .drag-over-item {
-            outline: 3px dashed #60A5FA !important; /* Blue dashed border */
-            outline-offset: 2px;
-            z-index: 10; /* Ensure it's above other elements */
-        }
-       .drag-over-tier-area {
-            background-color: rgba(79, 70, 229, 0.1) !important; /* Light blueish background for drop zone */
-       }
-       .tier-label-draggable {
-            cursor: grab !important;
-       }
-       .tier-label-dragging {
-            opacity: 0.5;
-       }
-       .tier-row-drop-target {
-            border-top: 3px dashed #4F46E5 !important; /* Indigo dashed border for tier reorder target */
-            border-bottom: 3px dashed #4F46E5 !important;
-       }
-       .resize-handle {
-            position: absolute;
-            right: -5px; /* Position slightly outside for easier grabbing */
-            top: 0;
-            width: 10px;
-            height: 100%;
-            cursor: col-resize;
-            z-index: 50; /* Ensure it's on top */
-        }
-        .resize-handle-visual {
-            width: 4px; /* Visual part of the handle */
-            height: 100%;
-            background-color: #4B5563; /* gray-600 */
-            border-radius: 2px;
-            position: absolute;
-            right: 3px; /* Center the visual part */
-        }
-        .dark .resize-handle-visual {
-            background-color: #6B7280; /* gray-500 for dark mode */
-        }
+        /* Custom styles for color input */
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 0.125rem; }
+        input[type="color"] { -webkit-appearance: none; width: 2.5rem; height: 2.5rem; border: none; background: none; cursor: pointer; border-radius: 0.125rem; }
+
+        /* Drag and Drop Visual Feedback */
+        .drag-over-item { outline: 3px dashed #60A5FA !important; outline-offset: 2px; z-index: 10; }
+        .drag-over-tier-area { background-color: rgba(79, 70, 229, 0.1) !important; }
+
+        /* Tier Label Dragging Styles */
+        .tier-label-draggable { cursor: grab !important; }
+        .tier-label-dragging { opacity: 0.5; }
+        .tier-row-drop-target { border-top: 3px dashed #4F46E5 !important; border-bottom: 3px dashed #4F46E5 !important; }
+
+        /* Resize Handle Styles */
+        .resize-handle { position: absolute; right: -5px; top: 0; width: 10px; height: 100%; cursor: col-resize; z-index: 50; }
+        .resize-handle-visual { width: 4px; height: 100%; background-color: #4B5563; border-radius: 2px; position: absolute; right: 3px; }
+        .dark .resize-handle-visual { background-color: #6B7280; }
+
+        /* Toggle Switch Styles */
+        .toggle-checkbox:checked { right: 0; border-color: #4F46E5; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #4F46E5; }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useRef, useEffect, useCallback } = React;
+        const { useState, useRef, useEffect, useCallback, memo } = React;
 
-        // Inline SVG Icons
+        // --- ICONS ---
         const PlusCircleIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>;
         const ListIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>;
         const Trash2Icon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 6h18"/><path d="M19 6v14c0 1.1-.9 2-2 2H7c-1.1 0-2-.9-2-2V6"/><path d="M8 6V4c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>;
@@ -90,613 +57,587 @@
         const SettingsIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>;
         const FileTextIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>;
         const RotateCcwIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>;
-        
+        const MaximizeIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>;
+        const MinimizeIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>;
+
+        // --- STATE SERIALIZATION ---
         const serializeState = (stateData) => {
+            try { return encodeURIComponent(JSON.stringify(stateData)); }
+            catch (error) { console.error("Error serializing state:", error); return ""; }
+        };
+
+        const deserializeState = (encodedStringFromHash) => {
+            if (!encodedStringFromHash) return { data: null, error: null };
             try {
-                const jsonString = JSON.stringify(stateData);
-                return encodeURIComponent(jsonString);
-            } catch (error) {
-                console.error("Error serializing state:", error);
-                return ""; // Return empty string or handle error as appropriate
+                const parsedData = JSON.parse(decodeURIComponent(encodedStringFromHash));
+                if (parsedData && Array.isArray(parsedData.tiers) && Array.isArray(parsedData.items)) {
+                    const validatedData = {
+                        ...parsedData,
+                        tiers: parsedData.tiers.map(tier => ({ ...tier, items: Array.isArray(tier.items) ? tier.items : [] })),
+                        itemWidth: parsedData.itemWidth || 80, itemHeight: parsedData.itemHeight || 80,
+                        containerWidth: parsedData.containerWidth || window.innerWidth, itemPoolTitle: parsedData.itemPoolTitle || "Item Pool",
+                        tierLabelWidth: parsedData.tierLabelWidth || 128
+                    };
+                    const validItemIds = new Set(validatedData.items.map(i => i.id));
+                    validatedData.tiers = validatedData.tiers.map(tier => ({ ...tier, items: tier.items.filter(id => validItemIds.has(id)) }));
+                    const validTierIds = new Set(validatedData.tiers.map(t => t.id));
+                    validatedData.items = validatedData.items.map(item => ({ ...item, tierId: validTierIds.has(item.tierId) ? item.tierId : null }));
+                    return { data: validatedData, error: null };
+                }
+                return { data: null, error: { message: "Invalid state structure.", type: "warning" } };
+            } catch (e) {
+                return { data: null, error: { message: `Error parsing URL state: ${e.message}`, type: "error" } };
             }
         };
-        
-        const deserializeState = (encodedStringFromHash) => {
-          if (!encodedStringFromHash) return { data: null, error: null };
-          try {
-            const jsonString = decodeURIComponent(encodedStringFromHash);
-            const parsedData = JSON.parse(jsonString);
-            
-            if (parsedData && Array.isArray(parsedData.tiers) && Array.isArray(parsedData.items)) {
-                const validatedData = {
-                    ...parsedData,
-                    tiers: parsedData.tiers.map(tier => ({ // Ensure items array exists for each tier
-                        ...tier,
-                        items: Array.isArray(tier.items) ? tier.items : []
-                    })),
-                    itemWidth: parsedData.itemWidth || 80,
-                    itemHeight: parsedData.itemHeight || 80,
-                    containerWidth: parsedData.containerWidth || 1280,
-                    itemPoolTitle: parsedData.itemPoolTitle || "Item Pool"
-                };
-                // Further validation for item tierIds
-                validatedData.items = validatedData.items.map(item => ({
-                     ...item,
-                     tierId: validatedData.tiers.some(t => t.id === item.tierId) ? item.tierId : null
-                }));
-                // Ensure tier.items only contains valid item IDs
-                 validatedData.tiers = validatedData.tiers.map(tier => ({
-                    ...tier,
-                    items: tier.items.filter(itemId => validatedData.items.some(i => i.id === itemId))
-                }));
 
+        // --- UI COMPONENTS ---
 
-                return { data: validatedData, error: null };
-            }
-            return { data: null, error: { message: "Invalid state structure after parsing.", type: "warning" } };
-          } catch (e) {
-            return { data: null, error: { message: `Error parsing or decoding URL state: ${e.message}`, type: "error" } };
-          }
+        const DraggableItem = memo(({ item, itemWidth, itemHeight, theme, draggedItemId, draggedOverItemId, handlers, addLog, deleteMode }) => (
+            <div
+                draggable="true"
+                onDragStart={(e) => handlers.handleItemDragStart(e, item.id)}
+                onDragEnter={(e) => handlers.handleItemDragEnter(e, item.id, item.tierId)}
+                onDragOver={(e) => handlers.handleItemDragOver(e, item.id, item.tierId)}
+                onDragLeave={(e) => handlers.handleItemDragLeave(e, item.id)}
+                onDrop={(e) => handlers.handleItemDrop(e, item.tierId, item.id)}
+                onDragEnd={handlers.cleanupDragStates}
+                style={{ width: `${itemWidth}px`, height: `${itemHeight}px` }}
+                className={`relative z-10 cursor-grab active:cursor-grabbing
+                    ${draggedItemId === item.id ? 'opacity-30' : ''}`}
+            >
+                <div
+                    className={`w-full h-full flex items-center justify-center overflow-hidden ${theme.itemBg} border ${theme.borderColor} rounded-sm shadow-sm transition-all duration-200
+                    ${draggedItemId === item.id ? 'ring-2 ring-indigo-500' : ''}
+                    ${draggedOverItemId === item.id && draggedItemId !== item.id ? 'drag-over-item' : ''}`}
+                >
+                    {item.type === 'image' ? (
+                        <img src={item.value} alt={item.value || "Item"} className="w-full h-full object-contain pointer-events-none" onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/${itemWidth}x${itemHeight}/FF0000/FFFFFF?text=Error`; e.target.alt = "Image failed"; addLog(`Failed image: ${item.value}`, "error"); }} />
+                    ) : (
+                        <span className={`text-sm font-medium ${theme.inputText} text-center p-1 break-all pointer-events-none`}>{item.value}</span>
+                    )}
+                </div>
+                <button
+                    onClick={() => handlers.handleDeleteItem(item.id)}
+                    className={`absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 z-20 transition-opacity ${deleteMode ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                >
+                    <Trash2Icon size={14} />
+                </button>
+            </div>
+        ));
+
+        const TierRow = ({ tier, items, theme, dragState, handlers, itemProps, index, deleteMode }) => {
+            const { draggedTierId, draggedOverTierRowId, draggedOverTierAreaId, draggedItemId, draggedOverItemId } = dragState;
+            const tierItems = tier.items.map(itemId => items.find(i => i.id === itemId)).filter(Boolean);
+
+            return (
+                <div
+                    onDragOver={(e) => handlers.handleTierRowDragOver(e, tier.id)}
+                    onDragLeave={(e) => handlers.handleTierRowDragLeave(e, tier.id)}
+                    onDrop={(e) => handlers.handleTierDrop(e, tier.id)}
+                    className={`flex items-stretch min-h-[100px] transition-all duration-200
+                        ${draggedOverTierRowId === tier.id && draggedTierId && draggedTierId !== tier.id ? 'tier-row-drop-target' : ''}
+                        ${index > 0 ? `${theme.borderColor} border-t` : ''}`}
+                >
+                    <div
+                        draggable="true"
+                        onDragStart={(e) => handlers.handleTierLabelDragStart(e, tier.id)}
+                        onDragEnd={handlers.cleanupDragStates}
+                        className={`relative flex-shrink-0 p-3 flex items-center justify-center text-center font-bold text-lg text-black group tier-label-draggable ${draggedTierId === tier.id ? 'tier-label-dragging' : ''}`}
+                        style={{ backgroundColor: tier.color, width: `${itemProps.tierLabelWidth}px` }}
+                    >
+                        {tier.type === 'image' ? <img src={tier.value} alt="Tier" className="w-full h-auto max-h-full object-contain pointer-events-none" /> : <span className="pointer-events-none">{tier.value}</span>}
+                        <button onClick={() => handlers.handleDeleteTier(tier.id)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 z-10"> <Trash2Icon size={14} /> </button>
+                        <button onClick={() => handlers.startEditingTier(tier)} className="absolute top-1 left-1 bg-gray-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 z-10"> <PencilIcon size={14} /> </button>
+                    </div>
+                    <div
+                        onDragEnter={(e) => handlers.handleTierAreaDragEnter(e, tier.id)}
+                        onDragOver={(e) => handlers.handleTierAreaDragOver(e, tier.id)}
+                        onDragLeave={(e) => handlers.handleTierAreaDragLeave(e, tier.id)}
+                        onDrop={(e) => handlers.handleItemDrop(e, tier.id, null)}
+                        className={`flex-grow p-2 flex flex-wrap gap-2 items-start justify-start min-h-[100px] ${theme.containerBg}
+                            ${draggedOverTierAreaId === tier.id && draggedItemId && !draggedOverItemId ? 'drag-over-tier-area' : ''}`}
+                    >
+                        {tierItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} />)}
+                        {tierItems.length === 0 && <p className={`${theme.darkMode ? 'text-gray-500' : 'text-gray-400'} text-sm italic p-4 pointer-events-none`}>Drag items here...</p>}
+                    </div>
+                </div>
+            );
+        };
+
+        const ItemPool = ({ items, itemPoolTitle, theme, dragState, handlers, itemProps, deleteMode }) => {
+            const { draggedOverTierAreaId, draggedItemId, draggedOverItemId } = dragState;
+            const unassignedItems = items.filter(item => item.tierId === null);
+
+            return (
+                <div
+                    onDragEnter={(e) => handlers.handleTierAreaDragEnter(e, null)}
+                    onDragOver={(e) => handlers.handleTierAreaDragOver(e, null)}
+                    onDragLeave={(e) => handlers.handleTierAreaDragLeave(e, null)}
+                    onDrop={(e) => handlers.handleItemDrop(e, null, null)}
+                    className={`relative p-4 min-h-[150px] flex flex-col w-full flex-grow ${theme.containerBg} ${theme.borderColor} border-t
+                        ${draggedOverTierAreaId === null && draggedItemId ? 'drag-over-tier-area' : ''}`}
+                >
+                    <h2 className={`text-xl font-semibold ${theme.text} mb-3 flex items-center justify-center gap-2`}><GripVerticalIcon size={20} /> {itemPoolTitle}</h2>
+                    <div className="flex flex-wrap gap-2 justify-center sm:justify-start flex-grow min-h-[100px]">
+                        {unassignedItems.length === 0 ? <p className={`${theme.darkMode ? 'text-gray-400' : 'text-gray-600'} text-sm text-center w-full`}>Add or drag items here.</p> :
+                            unassignedItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} />)
+                        }
+                    </div>
+                    <button onClick={handlers.handleResetAllItemsToPool} className={`absolute bottom-4 right-4 w-12 h-12 rounded-full shadow-lg flex items-center justify-center ${theme.darkMode ? 'bg-red-700 hover:bg-red-800' : 'bg-red-500 hover:bg-red-600'} ${theme.buttonText}`}><RotateCcwIcon size={24}/></button>
+                </div>
+            );
+        };
+
+        const ConfigurationPanel = ({ theme, uiState, uiSetters, data, dataHandlers, editState, editSetters, refs, itemProps, itemSetters, deleteMode, setDeleteMode }) => {
+            const { showConfiguration, editingTierId, showLogs } = uiState;
+            const { setShowConfiguration, setShowLogs } = uiSetters;
+            const { logs, standardColors } = data;
+            const { handleAddTier, handleAddItem, handlePasteItems, handleSaveEditedTier, cancelEditingTier, addLog } = dataHandlers;
+            const { editingTierLabel, editingTierColor, editingTierImageFile, editingTierImageUrl, newTierColor } = editState;
+            const { setEditingTierLabel, setEditingTierColor, setEditingTierImageFile, setEditingTierImageUrl, setNewTierColor } = editSetters;
+            const { newTierNameRef, newTierImageRef, newItemNameRef, newItemImageFileRef, newItemImageUrlRef, pasteItemsRef, editTierImageFileRef, editTierImageUrlRef } = refs;
+            const { itemWidth, itemHeight, tierLabelWidth } = itemProps;
+            const { setItemWidth, setItemHeight, setTierLabelWidth } = itemSetters;
+
+            const [localWidth, setLocalWidth] = useState(itemWidth);
+            const [localHeight, setLocalHeight] = useState(itemHeight);
+            const [localTierLabelWidth, setLocalTierLabelWidth] = useState(tierLabelWidth);
+
+            useEffect(() => {
+                setLocalWidth(itemWidth);
+                setLocalHeight(itemHeight);
+                setLocalTierLabelWidth(tierLabelWidth);
+            }, [itemWidth, itemHeight, tierLabelWidth]);
+
+            const handleSizeUpdate = () => {
+                const newWidth = Math.max(20, parseInt(localWidth) || 80);
+                const newHeight = Math.max(20, parseInt(localHeight) || 80);
+                const newLabelWidth = Math.max(40, parseInt(localTierLabelWidth) || 128);
+                setItemWidth(newWidth);
+                setItemHeight(newHeight);
+                setTierLabelWidth(newLabelWidth);
+                addLog(`Sizes updated: Item ${newWidth}x${newHeight}, Label ${newLabelWidth}`, 'info');
+            };
+
+            const handleKeyDown = (e) => {
+                if (e.key === 'Enter') {
+                    handleSizeUpdate();
+                    e.target.blur();
+                }
+            };
+
+            const handleHexColorChange = (e, isEditing) => {
+                const hex = e.target.value;
+                if (/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(hex)) {
+                    if (isEditing) setEditingTierColor(hex); else setNewTierColor(hex);
+                }
+            };
+
+            const copyLogsToClipboard = () => {
+                const logText = logs.map(l => `[${l.timestamp}] [${l.type.toUpperCase()}] ${l.message}`).join('\n');
+                if (logText) navigator.clipboard.writeText(logText).then(()=> addLog("Logs copied.", "info")).catch(()=> addLog("Clipboard copy failed.", "error"));
+                else addLog("No logs to copy.", "info");
+            };
+
+            return (
+                <div className={`${theme.containerBg} p-4 w-full ${theme.borderColor} border-t`}>
+                    <h2 className={`text-2xl font-bold ${theme.text} mb-4 text-center flex items-center justify-center gap-2`}>
+                        <SettingsIcon size={24} /> Configuration
+                        <button onClick={() => setShowConfiguration(!showConfiguration)} className={`p-1 rounded-full ${theme.darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-300 hover:bg-gray-400'}`}> {showConfiguration ? <ChevronUpIcon size={20} /> : <ChevronDownIcon size={20} />} </button>
+                    </h2>
+                    {showConfiguration && (
+                        <>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                                {/* General Settings */}
+                                <div className={`${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor} md:col-span-2 lg:col-span-3`}>
+                                    <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-purple-300':'text-purple-600'} mb-3 flex items-center gap-2`}> <SettingsIcon size={20}/> General Settings</h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                                        <div>
+                                            <label htmlFor="tierLabelWidth" className={`block text-sm font-medium ${theme.inputText}`}>Category Width (px)</label>
+                                            <input type="number" id="tierLabelWidth" value={localTierLabelWidth} onChange={e => setLocalTierLabelWidth(e.target.value)} onKeyDown={handleKeyDown} className={`mt-1 p-2 w-full border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                                        </div>
+                                        <div>
+                                            <label htmlFor="itemWidth" className={`block text-sm font-medium ${theme.inputText}`}>Item Width (px)</label>
+                                            <input type="number" id="itemWidth" value={localWidth} onChange={e => setLocalWidth(e.target.value)} onKeyDown={handleKeyDown} className={`mt-1 p-2 w-full border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                                        </div>
+                                        <div>
+                                            <label htmlFor="itemHeight" className={`block text-sm font-medium ${theme.inputText}`}>Item Height (px)</label>
+                                            <input type="number" id="itemHeight" value={localHeight} onChange={e => setLocalHeight(e.target.value)} onKeyDown={handleKeyDown} className={`mt-1 p-2 w-full border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                                        </div>
+                                        <div className="sm:col-span-2 lg:col-span-3 mt-2 grid grid-cols-2 gap-4">
+                                            <button onClick={handleSizeUpdate} className={`w-full py-2 rounded-sm shadow-sm ${theme.buttonSecondaryBg} ${theme.buttonText}`}>Update Sizes</button>
+                                            <div className="flex justify-center items-center">
+                                                <label htmlFor="deleteModeToggle" className={`text-sm font-medium ${theme.inputText} mr-3`}>Delete Mode</label>
+                                                <div className="relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
+                                                    <input type="checkbox" name="toggle" id="deleteModeToggle" checked={deleteMode} onChange={() => setDeleteMode(!deleteMode)} className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                                                    <label htmlFor="deleteModeToggle" className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {/* Edit/Create Tier */}
+                                {editingTierId ? (
+                                    <div className={`${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor}`}>
+                                        <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-indigo-300':'text-indigo-600'} mb-2 flex items-center gap-2`}> <PencilIcon size={20}/> Edit Tier</h3>
+                                        <input type="text" value={editingTierLabel} onChange={e=>setEditingTierLabel(e.target.value)} placeholder="Label" className={`w-full p-2 mb-2 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                                        <input type="text" ref={editTierImageUrlRef} defaultValue={editingTierImageUrl} onChange={e=>setEditingTierImageUrl(e.target.value)} placeholder="Image URL" className={`w-full p-2 mb-2 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                                        <input type="file" ref={editTierImageFileRef} onChange={e=>setEditingTierImageFile(e.target.files[0])} accept="image/*" className={`w-full mb-2 text-sm ${theme.inputText} file:mr-2 file:py-1 file:px-3 file:rounded-sm file:border-0 ${theme.darkMode ? 'file:bg-indigo-700 file:text-indigo-100':'file:bg-indigo-200 file:text-indigo-700'}`}/>
+                                        <div className="flex items-center gap-2 mb-2"> {standardColors.map(c=><button key={c} onClick={()=>setEditingTierColor(c)} className={`w-7 h-7 rounded-full border-2 ${editingTierColor===c?(theme.darkMode?'border-white':'border-black'):'border-transparent'}`} style={{backgroundColor:c}}/>)} </div>
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <input type="color" value={editingTierColor} onChange={e=>setEditingTierColor(e.target.value)} className={`w-9 h-9 rounded-sm ${theme.darkMode?'border-gray-600':'border-gray-400'} border`}/>
+                                            <input type="text" value={editingTierColor} onChange={e=>handleHexColorChange(e,true)} placeholder="#hex" className={`p-2 w-28 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                                        </div>
+                                        <div className="flex gap-2"><button onClick={handleSaveEditedTier} className={`flex-1 py-2 ${theme.darkMode?'bg-indigo-600 hover:bg-indigo-700':'bg-indigo-500 hover:bg-indigo-600'} ${theme.buttonText} rounded-sm`}>Save</button> <button onClick={cancelEditingTier} className={`flex-1 py-2 ${theme.buttonSecondaryBg} ${theme.buttonText} rounded-sm`}>Cancel</button></div>
+                                    </div>
+                                ) : (
+                                    <div className={`${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor}`}>
+                                        <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-blue-300':'text-blue-600'} mb-2 flex items-center gap-2`}> <PlusCircleIcon size={20}/> Create Tier</h3>
+                                        <input type="text" ref={newTierNameRef} placeholder="Label" className={`w-full p-2 mb-2 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                                        <input type="file" ref={newTierImageRef} accept="image/*" className={`w-full mb-2 text-sm ${theme.inputText} file:mr-2 file:py-1 file:px-3 file:rounded-sm file:border-0 ${theme.darkMode ? 'file:bg-blue-800 file:text-blue-100':'file:bg-blue-200 file:text-blue-700'}`}/>
+                                        <div className="flex items-center gap-2 mb-2"> {standardColors.map(c=><button key={c} onClick={()=>setNewTierColor(c)} className={`w-7 h-7 rounded-full border-2 ${newTierColor===c?(theme.darkMode?'border-white':'border-black'):'border-transparent'}`} style={{backgroundColor:c}}/>)} </div>
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <input type="color" value={newTierColor} onChange={e=>setNewTierColor(e.target.value)} className={`w-9 h-9 rounded-sm ${theme.darkMode?'border-gray-600':'border-gray-400'} border`}/>
+                                            <input type="text" value={newTierColor} onChange={e=>handleHexColorChange(e,false)} placeholder="#hex" className={`p-2 w-28 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                                        </div>
+                                        <button onClick={handleAddTier} className={`w-full py-2 ${theme.buttonPrimaryBg} ${theme.buttonText} rounded-sm`}>Add Tier</button>
+                                    </div>
+                                )}
+                                {/* Add Item */}
+                                <div className={`${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor}`}>
+                                    <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-green-300':'text-green-600'} mb-2 flex items-center gap-2`}> <PlusCircleIcon size={20}/> Add Item</h3>
+                                    <input type="text" ref={newItemNameRef} placeholder="Name" className={`w-full p-2 mb-2 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                                    <input type="text" ref={newItemImageUrlRef} placeholder="Image URL" className={`w-full p-2 mb-2 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                                    <input type="file" ref={newItemImageFileRef} accept="image/*" className={`w-full mb-3 text-sm ${theme.inputText} file:mr-2 file:py-1 file:px-3 file:rounded-sm file:border-0 ${theme.darkMode ? 'file:bg-green-800 file:text-green-100':'file:bg-green-200 file:text-green-700'}`}/>
+                                    <button onClick={handleAddItem} className={`w-full py-2 ${theme.darkMode?'bg-green-600 hover:bg-green-700':'bg-green-500 hover:bg-green-600'} ${theme.buttonText} rounded-sm`}>Add Item</button>
+                                </div>
+                                {/* Paste Items */}
+                                <div className={`${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor}`}>
+                                    <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-yellow-300':'text-yellow-600'} mb-2 flex items-center gap-2`}> <ListIcon size={20}/> Paste Items</h3>
+                                    <textarea ref={pasteItemsRef} rows="5" placeholder="One per line" className={`w-full p-2 mb-3 border ${theme.borderColor} rounded-sm resize-y ${theme.inputBg} ${theme.inputText}`}></textarea>
+                                    <button onClick={handlePasteItems} className={`w-full py-2 ${theme.darkMode?'bg-yellow-600 hover:bg-yellow-700':'bg-yellow-500 hover:bg-yellow-600'} ${theme.buttonText} rounded-sm`}>Add Pasted</button>
+                                </div>
+                            </div>
+                            {/* Logs */}
+                            <div className={`${theme.containerBg} p-0 w-full ${theme.darkMode ? 'border-t border-gray-700' : 'border-t border-gray-300'} mt-4 pt-4`}>
+                                <h3 className={`text-xl font-semibold ${theme.text} mb-3 text-center flex items-center justify-center gap-2`}>
+                                    <FileTextIcon size={20} /> Application Logs
+                                    <button onClick={()=>setShowLogs(!showLogs)} className={`p-1 rounded-full ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>{showLogs?<ChevronUpIcon size={18}/>:<ChevronDownIcon size={18}/>}</button>
+                                </h3>
+                                {showLogs && (<>
+                                    <div className="flex gap-2 mb-3"> <button onClick={copyLogsToClipboard} className={`flex-1 py-1.5 px-3 rounded-sm ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>Copy</button> </div>
+                                    <div className={`log-display-area flex flex-col gap-1 ${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor} max-h-60 overflow-y-auto text-left`}>
+                                        {logs.length === 0 ? <p className={`${theme.darkMode?'text-gray-400':'text-gray-600'} text-sm`}>No logs.</p> : logs.map((l,i)=>(
+                                            <p key={i} className={`text-xs font-mono ${l.type==='error'?(theme.darkMode?'text-red-400':'text-red-600'):l.type==='warning'?(theme.darkMode?'text-yellow-400':'text-yellow-600'):l.type==='action'?(theme.darkMode?'text-blue-300':'text-blue-600'):l.type==='event'?(theme.darkMode?'text-purple-300':'text-purple-600'):(theme.darkMode?'text-gray-300':'text-gray-700')}`}>
+                                                <span className={`${theme.darkMode?'text-gray-500':'text-gray-400'}`}>{l.timestamp}</span> <span className={`font-bold ${l.type==='error'?(theme.darkMode?'text-red-500':'text-red-700'):l.type==='warning'?(theme.darkMode?'text-yellow-500':'text-yellow-700'):l.type==='action'?(theme.darkMode?'text-blue-400':'text-blue-700'):l.type==='event'?(theme.darkMode?'text-purple-400':'text-purple-700'):(theme.darkMode?'text-gray-400':'text-gray-500')}`}>[{l.type.toUpperCase()}]</span> {l.message}
+                                            </p>
+                                        ))}
+                                    </div></>
+                                )}
+                            </div>
+                        </>
+                    )}
+                </div>
+            );
         };
 
         function App() {
-          const [darkMode, setDarkMode] = useState(true);
-          const [logs, setLogs] = useState([]);
-          const addLog = useCallback((message, type = 'info') => setLogs(prev => [{ message, type, timestamp: new Date().toLocaleTimeString() }, ...prev].slice(0, 100)), []);
+            // --- STATE MANAGEMENT ---
+            const [darkMode, setDarkMode] = useState(true);
+            const [logs, setLogs] = useState([]);
+            const addLog = useCallback((message, type = 'info') => setLogs(prev => [{ message, type, timestamp: new Date().toLocaleTimeString() }, ...prev].slice(0, 100)), []);
 
-          const initialDeserializedResult = deserializeState(window.location.hash.substring(1));
-          const initialData = initialDeserializedResult.data;
+            const initialDeserializedResult = deserializeState(window.location.hash.substring(1));
+            const initialData = initialDeserializedResult.data;
 
-          const [tiers, setTiers] = useState(initialData?.tiers || [
-            { id: 's', type: 'name', value: 'S', items: [], color: '#ff7f7f' }, { id: 'a', type: 'name', value: 'A', items: [], color: '#ffbf7f' },
-            { id: 'b', type: 'name', value: 'B', items: [], color: '#ffff7f' }, { id: 'c', type: 'name', value: 'C', items: [], color: '#bfff7f' },
-            { id: 'd', type: 'name', value: 'D', items: [], color: '#7fbfff' }, { id: 'f', type: 'name', value: 'F', items: [], color: '#bf7fff' },
-          ]);
-          const [items, setItems] = useState(initialData?.items || []);
-          const [tierListTitle, setTierListTitle] = useState(initialData?.tierListTitle || 'My Tier List');
-          const [itemPoolTitle, setItemPoolTitle] = useState(initialData?.itemPoolTitle || 'Item Pool'); 
-          const [itemWidth, setItemWidth] = useState(initialData?.itemWidth || 80);
-          const [itemHeight, setItemHeight] = useState(initialData?.itemHeight || 80);
-          const [containerWidth, setContainerWidth] = useState(initialData?.containerWidth || 1280); 
-          const [isResizing, setIsResizing] = useState(false);
-          
-          const appContainerRef = useRef(null);
-          const resizeDragStartRef = useRef({ x: 0, width: 0 });
-          const isResizingRef = useRef(isResizing); 
+            const [tiers, setTiers] = useState(initialData?.tiers || [
+                { id: 's', type: 'name', value: 'S', items: [], color: '#ff7f7f' }, { id: 'a', type: 'name', value: 'A', items: [], color: '#ffbf7f' },
+                { id: 'b', type: 'name', value: 'B', items: [], color: '#ffff7f' }, { id: 'c', type: 'name', value: 'C', items: [], color: '#bfff7f' },
+                { id: 'd', type: 'name', value: 'D', items: [], color: '#7fbfff' }, { id: 'e', type: 'name', value: 'E', items: [], color: '#a27fff' },
+                { id: 'f', type: 'name', value: 'F', items: [], color: '#bf7fff' },
+            ]);
+            const [items, setItems] = useState(initialData?.items || []);
+            const [tierListTitle, setTierListTitle] = useState(initialData?.tierListTitle || 'My Tier List');
+            const [itemPoolTitle, setItemPoolTitle] = useState(initialData?.itemPoolTitle || 'Item Pool');
+            const [itemWidth, setItemWidth] = useState(initialData?.itemWidth || 80);
+            const [itemHeight, setItemHeight] = useState(initialData?.itemHeight || 80);
+            const [containerWidth, setContainerWidth] = useState(initialData?.containerWidth || window.innerWidth);
+            const [tierLabelWidth, setTierLabelWidth] = useState(initialData?.tierLabelWidth || 128);
+            const [deleteMode, setDeleteMode] = useState(false);
+            const [isFullscreen, setIsFullscreen] = useState(false);
 
-          useEffect(() => {
-            isResizingRef.current = isResizing; 
-          }, [isResizing]);
+            const [isResizing, setIsResizing] = useState(false);
+            const [showConfiguration, setShowConfiguration] = useState(true);
+            const [showLogs, setShowLogs] = useState(false);
 
-          useEffect(() => {
-            if (initialDeserializedResult.error) {
-              addLog(initialDeserializedResult.error.message, initialDeserializedResult.error.type);
-            }
-          }, [initialDeserializedResult.error, addLog]);
+            const [draggedItemId, setDraggedItemId] = useState(null);
+            const [draggedTierId, setDraggedTierId] = useState(null);
+            const [draggedOverItemId, setDraggedOverItemId] = useState(null);
+            const [draggedOverTierRowId, setDraggedOverTierRowId] = useState(null);
+            const [draggedOverTierAreaId, setDraggedOverTierAreaId] = useState(null);
 
-          const [newTierColor, setNewTierColor] = useState('#888888');
-          const [editingTierId, setEditingTierId] = useState(null);
-          const [editingTierLabel, setEditingTierLabel] = useState('');
-          const [editingTierColor, setEditingTierColor] = useState('#888888');
-          const [editingTierImageFile, setEditingTierImageFile] = useState(null);
-          const [editingTierImageUrl, setEditingTierImageUrl] = useState('');
-          const [draggedItemId, setDraggedItemId] = useState(null);
-          const [draggedTierId, setDraggedTierId] = useState(null);
-          const [showConfiguration, setShowConfiguration] = useState(true);
-          const [showLogs, setShowLogs] = useState(false);
-          const [draggedOverItemId, setDraggedOverItemId] = useState(null);
-          const [draggedOverTierRowId, setDraggedOverTierRowId] = useState(null);
-          const [draggedOverTierAreaId, setDraggedOverTierAreaId] = useState(null);
+            const [editingTierId, setEditingTierId] = useState(null);
+            const [editingTierLabel, setEditingTierLabel] = useState('');
+            const [editingTierColor, setEditingTierColor] = useState('#888888');
+            const [editingTierImageFile, setEditingTierImageFile] = useState(null);
+            const [editingTierImageUrl, setEditingTierImageUrl] = useState('');
+            const [newTierColor, setNewTierColor] = useState('#888888');
 
-          const newTierNameRef = useRef(null);
-          const newTierImageRef = useRef(null);
-          const newItemNameRef = useRef(null);
-          const newItemImageFileRef = useRef(null);
-          const newItemImageUrlRef = useRef(null);
-          const pasteItemsRef = useRef(null);
-          const editTierImageFileRef = useRef(null);
-          const editTierImageUrlRef = useRef(null);
-          
-          const standardColors = ['#ff7f7f', '#ffbf7f', '#ffff7f', '#bfff7f', '#7fbfff', '#bf7fff', '#c0c0c0', '#404040'];
+            const newTierNameRef = useRef(null); const newTierImageRef = useRef(null);
+            const newItemNameRef = useRef(null); const newItemImageFileRef = useRef(null); const newItemImageUrlRef = useRef(null);
+            const pasteItemsRef = useRef(null); const editTierImageFileRef = useRef(null); const editTierImageUrlRef = useRef(null);
+            const appContainerRef = useRef(null); const resizeDragStartRef = useRef({ x: 0, width: 0 });
+            const isResizingRef = useRef(isResizing);
+            useEffect(() => { isResizingRef.current = isResizing; }, [isResizing]);
 
-          useEffect(() => { document.documentElement.classList.toggle('dark', darkMode); document.body.classList.toggle('bg-black', darkMode); document.body.classList.toggle('bg-gray-100', !darkMode); }, [darkMode]);
-          
-          useEffect(() => { 
-            const stateToSave = { tiers, items, tierListTitle, itemWidth, itemHeight, containerWidth, itemPoolTitle }; 
-            const hashString = serializeState(stateToSave);
-            const id = setTimeout(() => { 
-                if (window.location.hash.substring(1) !== hashString) {
-                    window.location.hash = hashString; 
-                }
-            }, 700); 
-            return () => clearTimeout(id); 
-          }, [tiers, items, tierListTitle, itemWidth, itemHeight, containerWidth, itemPoolTitle]); 
-          
-          const generateId = useCallback(() => crypto.randomUUID(), []);
+            const standardColors = ['#ff7f7f', '#ffbf7f', '#ffff7f', '#bfff7f', '#7fbfff', '#bf7fff', '#c0c0c0', '#404040'];
 
-          const handleAddTier = () => {
-            const name = newTierNameRef.current.value.trim(); const file = newTierImageRef.current.files[0];
-            if (!name && !file) { addLog("Tier name or image required.", "warning"); return; }
-            let newTier = { id: generateId(), items: [], color: newTierColor };
-            if (file) {
-              const reader = new FileReader();
-              reader.onloadend = () => { newTier.type = 'image'; newTier.value = reader.result; setTiers(p => [...p, newTier]); addLog("Added image tier.", "info"); };
-              reader.onerror = () => addLog("Error reading tier image.", "error"); reader.readAsDataURL(file);
-            } else { newTier.type = name.length === 1 ? 'letter' : 'name'; newTier.value = name; setTiers(p => [...p, newTier]); addLog(`Added text tier: ${name}`, "info"); }
-            newTierNameRef.current.value = ''; if (newTierImageRef.current) newTierImageRef.current.value = '';
-          };
+            useEffect(() => { document.documentElement.classList.toggle('dark', darkMode); document.body.classList.toggle('bg-black', darkMode); document.body.classList.toggle('bg-gray-100', !darkMode); }, [darkMode]);
+            useEffect(() => {
+                const stateToSave = { tiers, items, tierListTitle, itemWidth, itemHeight, containerWidth, itemPoolTitle, tierLabelWidth };
+                const hashString = serializeState(stateToSave);
+                const id = setTimeout(() => { if (window.location.hash.substring(1) !== hashString) { window.location.hash = hashString; } }, 700);
+                return () => clearTimeout(id);
+            }, [tiers, items, tierListTitle, itemWidth, itemHeight, containerWidth, itemPoolTitle, tierLabelWidth]);
+            useEffect(() => { if (initialDeserializedResult.error) { addLog(initialDeserializedResult.error.message, initialDeserializedResult.error.type); } }, [initialDeserializedResult.error, addLog]);
 
-          const handleAddItem = () => {
-            const name = newItemNameRef.current.value.trim(); const url = newItemImageUrlRef.current.value.trim(); const file = newItemImageFileRef.current.files[0];
-            if (!name && !url && !file) { addLog("Item details required.", "warning"); return; }
-            let newItem = { id: generateId(), tierId: null };
-            if (url) {
-              if (!url.startsWith('http')) { addLog("Invalid item URL.", "error"); return; }
-              newItem.type = 'image'; newItem.value = url; setItems(p => [...p, newItem]); addLog("Added URL item.", "info");
-            } else if (file) {
-              const reader = new FileReader();
-              reader.onloadend = () => { newItem.type = 'image'; newItem.value = reader.result; setItems(p => [...p, newItem]); addLog("Added file item.", "info"); };
-              reader.onerror = () => addLog("Error item image.", "error"); reader.readAsDataURL(file);
-            } else { newItem.type = 'name'; newItem.value = name; setItems(p => [...p, newItem]); addLog(`Added text item: ${name}`, "info"); }
-            newItemNameRef.current.value = ''; if (newItemImageUrlRef.current) newItemImageUrlRef.current.value = ''; if (newItemImageFileRef.current) newItemImageFileRef.current.value = '';
-          };
-
-          const handlePasteItems = () => {
-            const text = pasteItemsRef.current.value.trim(); if (!text) { addLog("Paste area empty.", "warning"); return; }
-            const newItems = text.split('\n').map(l => ({ id: generateId(), type: 'name', value: l.trim(), tierId: null })).filter(i => i.value);
-            setItems(p => [...p, ...newItems]); addLog(`Pasted ${newItems.length} items.`, "info"); pasteItemsRef.current.value = '';
-          };
-
-          const handleResetAllItemsToPool = () => {
-            setItems(prevItems => prevItems.map(item => ({ ...item, tierId: null })));
-            setTiers(prevTiers => prevTiers.map(tier => ({ ...tier, items: [] })));
-            addLog("All items reset to pool.", "action");
-          };
-
-          const cleanupDragStates = () => { setDraggedItemId(null); setDraggedTierId(null); setDraggedOverItemId(null); setDraggedOverTierRowId(null); setDraggedOverTierAreaId(null); addLog("Drag End: States cleaned.", "debug"); };
-          
-          const handleItemDragStart = (e, itemId) => { addLog(`ITEM Drag Start: ${itemId}`, "action"); setDraggedItemId(itemId); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', itemId); };
-          
-          const handleItemDragEnter = (e, targetItemId, targetItemTierId) => {
-            e.preventDefault(); e.stopPropagation();
-            if (draggedItemId && draggedItemId !== targetItemId) {
-              addLog(`>>> ITEM onDragEnter: Target ${targetItemId} in tier ${targetItemTierId}. Dragged: ${draggedItemId}`, "event");
-              setDraggedOverItemId(targetItemId);
-              setDraggedOverTierAreaId(targetItemTierId);
-            }
-          };
-
-          const handleItemDragOver = (e, targetItemId, targetItemTierId) => {
-            e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'move';
-            if (draggedItemId && draggedItemId !== targetItemId) {
-              addLog(`>>> ENTERED Item Drag Over ITEM: Over ${targetItemId}`, "event");
-              setDraggedOverItemId(targetItemId);
-              setDraggedOverTierAreaId(targetItemTierId);
-            }
-          };
-
-          const handleItemDragLeave = (e, itemId) => {
-            e.stopPropagation();
-            if (!e.currentTarget.contains(e.relatedTarget)) {
-                addLog(`>>> ITEM onDragLeave: ${itemId}`, "event");
-                setDraggedOverItemId(null); 
-            }
-          };
-
-          const handleTierAreaDragEnter = (e, tierIdContext) => {
-            e.preventDefault(); e.stopPropagation();
-            if (draggedItemId) {
-                addLog(`>>> TIER AREA onDragEnter: Tier ${tierIdContext}. DraggedItem: ${draggedItemId}`, "event");
-                setDraggedOverTierAreaId(tierIdContext);
-                setDraggedOverItemId(null);
-            }
-          };
-          
-          const handleTierAreaDragOver = (e, tierIdContext) => {
-            e.preventDefault(); e.stopPropagation();
-            if (draggedItemId) {
-                e.dataTransfer.dropEffect = 'move';
-                addLog(`>>> ENTERED TIER AREA Drag Over: Tier ${tierIdContext}. DraggedItem: ${draggedItemId}`, "event");
-                setDraggedOverTierAreaId(tierIdContext);
-                setDraggedOverItemId(null);
-            }
-          };
-
-          const handleTierAreaDragLeave = (e, tierIdContext) => {
-            e.stopPropagation();
-            if (!e.currentTarget.contains(e.relatedTarget) && draggedItemId) {
-                 addLog(`>>> TIER AREA onDragLeave: Tier ${tierIdContext}. DraggedItem: ${draggedItemId}`, "event");
-                 setDraggedOverTierAreaId(null);
-            }
-          };
-
-          const handleTierLabelDragStart = (e, tierId) => {
-            addLog(`TIER LABEL Drag Start: ${tierId}`, "action");
-            setDraggedTierId(tierId);
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', tierId);
-          };
-
-          const handleTierRowDragOver = (e, targetTierId) => {
-            e.preventDefault(); 
-            if (draggedTierId && draggedTierId !== targetTierId) {
-              e.dataTransfer.dropEffect = 'move';
-              setDraggedOverTierRowId(targetTierId);
-              addLog(`>>> TIER ROW onDragOver (for tier reorder): Target ${targetTierId}. DraggedTier: ${draggedTierId}`, "event");
-            } else if (draggedItemId) {
-              e.dataTransfer.dropEffect = 'move'; 
-              addLog(`>>> TIER ROW onDragOver (item passing): Target ${targetTierId}. DraggedItem: ${draggedItemId}`, "debug");
-            }
-          };
-           const handleTierRowDragLeave = (e, tierId) => {
-            if (!e.currentTarget.contains(e.relatedTarget) && draggedTierId) {
-                addLog(`>>> TIER ROW onDragLeave: ${tierId}`, "event");
-                setDraggedOverTierRowId(null);
-            }
-          };
-
-          const handleItemDrop = (e, targetTierId, beforeItemId = null) => {
-            e.preventDefault(); e.stopPropagation();
-            const droppedItemId = draggedItemId || e.dataTransfer.getData('text/plain');
-            if (!droppedItemId || draggedTierId) { addLog("Item drop cancelled: Not item drag.", "warning"); cleanupDragStates(); return; }
-            const itemToMove = items.find(i => i.id === droppedItemId);
-            if (!itemToMove) { addLog("Item drop: Item not found.", "error"); cleanupDragStates(); return; }
-            
-            addLog(`ITEM DROP: Item ${droppedItemId} to tier ${targetTierId}, before ${beforeItemId || 'end'}. Source: ${itemToMove.tierId}`, "action");
-
-            setItems(prev => prev.map(i => i.id === droppedItemId ? { ...i, tierId: targetTierId } : i));
-            setTiers(prev => {
-              let newTiers = prev.map(t => t.id === itemToMove.tierId ? { ...t, items: t.items.filter(id => id !== droppedItemId) } : t);
-              if (targetTierId) {
-                newTiers = newTiers.map(t => {
-                  if (t.id === targetTierId) {
-                    let newItemsInTier = t.items.filter(id => id !== droppedItemId);
-                    const idx = beforeItemId ? newItemsInTier.indexOf(beforeItemId) : -1;
-                    if (idx !== -1) newItemsInTier.splice(idx, 0, droppedItemId);
-                    else newItemsInTier.push(droppedItemId);
-                    return { ...t, items: newItemsInTier };
-                  } return t;
-                });
-              } return newTiers;
-            });
-            cleanupDragStates();
-          };
-
-          const handleTierDrop = (e, targetTierId) => {
-            e.preventDefault(); 
-            const dTierId = draggedTierId || e.dataTransfer.getData('text/plain');
-            if (!dTierId || dTierId === targetTierId || draggedItemId) { addLog("Tier drop cancelled.", "warning"); cleanupDragStates(); return; }
-            addLog(`TIER DROP: Tier ${dTierId} onto ${targetTierId}`, "action");
-            setTiers(prev => {
-              const dTier = prev.find(t => t.id === dTierId); if (!dTier) return prev;
-              const remaining = prev.filter(t => t.id !== dTierId);
-              const targetIdx = remaining.findIndex(t => t.id === targetTierId);
-              if (targetIdx !== -1) remaining.splice(targetIdx, 0, dTier); else remaining.push(dTier);
-              return remaining;
-            });
-            cleanupDragStates();
-          };
-          
-          const handleDeleteItem = (id) => { setItems(p => p.filter(i => i.id !== id)); setTiers(p => p.map(t => ({ ...t, items: t.items.filter(itemId => itemId !== id) }))); addLog(`Deleted item ${id}`, "action"); };
-          const handleDeleteTier = (id) => { const tierDel = tiers.find(t=>t.id===id); if(tierDel) setItems(p=>p.map(i=>tierDel.items.includes(i.id)?{...i, tierId:null}:i)); setTiers(p => p.filter(t => t.id !== id)); if(editingTierId===id) cancelEditingTier(); addLog(`Deleted tier ${id}`, "action"); };
-          const startEditingTier = (tier) => { setEditingTierId(tier.id); setEditingTierLabel(tier.type !== 'image' ? tier.value : ''); setEditingTierColor(tier.color); setEditingTierImageUrl(tier.type === 'image' && tier.value.startsWith('http') ? tier.value : ''); setEditingTierImageFile(null); if(editTierImageFileRef.current) editTierImageFileRef.current.value=''; if(editTierImageUrlRef.current) editTierImageUrlRef.current.value = (tier.type === 'image' && tier.value.startsWith('http') ? tier.value : ''); setShowConfiguration(true); addLog(`Editing tier ${tier.id}`, "info"); };
-          
-          const handleSaveEditedTier = () => {
-            if (!editingTierId) return;
-            let updatedValue = editingTierLabel.trim(); let updatedType = updatedValue.length === 1 ? 'letter' : 'name';
-            const save = (val, type, col) => { setTiers(p => p.map(t => t.id === editingTierId ? { ...t, value: val, type: type, color: col } : t)); addLog(`Saved tier ${editingTierId}`, "action"); cancelEditingTier();};
-            if (editTierImageUrlRef.current.value.trim()) { 
-              const url = editTierImageUrlRef.current.value.trim();
-              if (!url.startsWith('http')) { addLog("Invalid URL for tier edit.", "error"); return; }
-              save(url, 'image', editingTierColor);
-            } else if (editingTierImageFile) {
-              const reader = new FileReader();
-              reader.onloadend = () => save(reader.result, 'image', editingTierColor);
-              reader.readAsDataURL(editingTierImageFile);
-            } else if (updatedValue) {
-              save(updatedValue, updatedType, editingTierColor);
-            } else { 
-                const currentTier = tiers.find(t => t.id === editingTierId);
-                if (currentTier && currentTier.type === 'image') save(currentTier.value, 'image', editingTierColor);
-                else addLog("Label cannot be empty for text tiers.", "warning");
-            }
-          };
-          const cancelEditingTier = () => { setEditingTierId(null); setEditingTierLabel(''); setEditingTierColor('#888888'); setEditingTierImageUrl(''); setEditingTierImageFile(null); if(editTierImageFileRef.current) editTierImageFileRef.current.value=''; if(editTierImageUrlRef.current) editTierImageUrlRef.current.value=''; addLog("Edit tier cancelled.", "info"); };
-          const unassignedItems = items.filter(item => item.tierId === null);
-          const handleHexColorChange = (e, isEditing) => { const hex = e.target.value; if (/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(hex)) { if (isEditing) setEditingTierColor(hex); else setNewTierColor(hex); }};
-          
-          const copyLogsToClipboard = () => { 
-            const logText = logs.map(l => `[${l.timestamp}] [${l.type.toUpperCase()}] ${l.message}`).join('\n');
-            if (logText) {
-                navigator.clipboard.writeText(logText)
-                  .then(()=> addLog("Logs copied to clipboard.", "info"))
-                  .catch(()=> addLog("Failed to copy logs. Please use 'Select All'.", "error"));
-            } else {
-                addLog("No logs to copy.", "info");
-            }
-          };
-          const selectAllLogs = () => { 
-            const area = document.querySelector('.log-display-area'); 
-            if(area && area.hasChildNodes()){ 
-              area.focus({preventScroll:true}); 
-              const r=document.createRange();r.selectNodeContents(area);const s=window.getSelection();s.removeAllRanges();s.addRange(r);
-              if (window.getSelection().rangeCount > 0 && window.getSelection().toString().length > 0) {
-                addLog("Logs selected. Press Ctrl+C or Cmd+C to copy.", "info");
-              } else {
-                addLog("Failed to select logs. Try again or copy manually.", "warning");
-              }
-            } else if (area) {
-              addLog("Log area is empty, nothing to select.", "info");
-            }
-            else {
-              addLog("Log display area not found for selection.", "warning");
-            }
-          };
-
-          const theme = { bg: darkMode ? 'bg-black' : 'bg-gray-100', text: darkMode ? 'text-gray-100' : 'text-gray-900', containerBg: darkMode ? 'bg-gray-900' : 'bg-white', inputBg: darkMode ? 'bg-gray-700' : 'bg-gray-50', inputText: darkMode ? 'text-gray-100' : 'text-gray-900', placeholderText: darkMode ? 'placeholder-gray-400' : 'placeholder-gray-500', borderColor: darkMode ? 'border-gray-700' : 'border-gray-300', buttonPrimaryBg: darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600', buttonSecondaryBg: darkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-500 hover:bg-gray-600', buttonText: 'text-white', sectionBg: darkMode ? 'bg-gray-800' : 'bg-gray-50', };
-          
-          // --- Resize Handlers ---
-          const handleResizeMouseDown = (e) => {
-            e.preventDefault();
-            setIsResizing(true);
-            resizeDragStartRef.current = {
-                x: e.clientX,
-                width: appContainerRef.current ? appContainerRef.current.offsetWidth : containerWidth 
-            };
-            addLog("Resize Start", "action");
-          };
-
-          const mouseMoveHandlerRef = useRef();
-          const mouseUpHandlerRef = useRef();
-
-          useEffect(() => {
-            mouseMoveHandlerRef.current = (e) => {
-                if (!isResizingRef.current) return; 
-                addLog("Resize Mouse Move", "debug"); 
-                const { x: initialX, width: initialWidth } = resizeDragStartRef.current;
-                const dx = e.clientX - initialX;
-                let newWidth = initialWidth + dx;
-                const maxWidth = window.innerWidth * 0.95; 
-                const minWidth = 600; 
-                newWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));
-                setContainerWidth(newWidth);
-            };
-
-            mouseUpHandlerRef.current = () => {
-                if (!isResizingRef.current) return; 
-                setIsResizing(false); 
-                if (appContainerRef.current) { 
-                    addLog(`Resize End: New width ${appContainerRef.current.offsetWidth}px`, "action");
+            const toggleFullScreen = () => {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen();
                 } else {
-                    addLog(`Resize End: New width ${containerWidth}px (from state)`, "action");
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    }
                 }
             };
-          }); 
 
-          useEffect(() => {
-            const handleMove = e => mouseMoveHandlerRef.current(e);
-            const handleUp = () => mouseUpHandlerRef.current();
+            useEffect(() => {
+                const handleFullScreenChange = () => setIsFullscreen(!!document.fullscreenElement);
+                document.addEventListener('fullscreenchange', handleFullScreenChange);
+                return () => document.removeEventListener('fullscreenchange', handleFullScreenChange);
+            }, []);
 
-            if (isResizing) {
-                document.addEventListener('mousemove', handleMove);
-                document.addEventListener('mouseup', handleUp);
-                addLog("Resize listeners ADDED", "debug");
-            }
-            
-            return () => {
-                document.removeEventListener('mousemove', handleMove);
-                document.removeEventListener('mouseup', handleUp);
-                addLog("Resize listeners CLEANED UP", "debug");
+            const generateId = useCallback(() => crypto.randomUUID(), []);
+
+            const handleAddTier = () => {
+                const name = newTierNameRef.current.value.trim(); const file = newTierImageRef.current.files[0];
+                if (!name && !file) { addLog("Tier name or image required.", "warning"); return; }
+                let newTier = { id: generateId(), items: [], color: newTierColor };
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => { newTier.type = 'image'; newTier.value = reader.result; setTiers(p => [...p, newTier]); addLog("Added image tier.", "info"); };
+                    reader.onerror = () => addLog("Error reading tier image.", "error"); reader.readAsDataURL(file);
+                } else { newTier.type = name.length === 1 ? 'letter' : 'name'; newTier.value = name; setTiers(p => [...p, newTier]); addLog(`Added text tier: ${name}`, "info"); }
+                newTierNameRef.current.value = ''; if (newTierImageRef.current) newTierImageRef.current.value = '';
             };
-          }, [isResizing]); 
 
+            const handleAddItem = () => {
+                const name = newItemNameRef.current.value.trim(); const url = newItemImageUrlRef.current.value.trim(); const file = newItemImageFileRef.current.files[0];
+                if (!name && !url && !file) { addLog("Item details required.", "warning"); return; }
+                let newItem = { id: generateId(), tierId: null };
+                if (url) {
+                    if (!url.startsWith('http')) { addLog("Invalid item URL.", "error"); return; }
+                    newItem.type = 'image'; newItem.value = url; setItems(p => [...p, newItem]); addLog("Added URL item.", "info");
+                } else if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => { newItem.type = 'image'; newItem.value = reader.result; setItems(p => [...p, newItem]); addLog("Added file item.", "info"); };
+                    reader.onerror = () => addLog("Error item image.", "error"); reader.readAsDataURL(file);
+                } else { newItem.type = 'name'; newItem.value = name; setItems(p => [...p, newItem]); addLog(`Added text item: ${name}`, "info"); }
+                newItemNameRef.current.value = ''; if (newItemImageUrlRef.current) newItemImageUrlRef.current.value = ''; if (newItemImageFileRef.current) newItemImageFileRef.current.value = '';
+            };
 
-          const renderItem = (item) => ( 
-            <div
-              key={item.id}
-              draggable="true"
-              onDragStart={(e) => handleItemDragStart(e, item.id)}
-              onDragEnter={(e) => handleItemDragEnter(e, item.id, item.tierId)}
-              onDragOver={(e) => handleItemDragOver(e, item.id, item.tierId)}
-              onDragLeave={(e) => handleItemDragLeave(e, item.id)}
-              onDrop={(e) => { addLog(`ITEM onDrop: Dragged ${draggedItemId} onto item ${item.id} (becomes beforeItemId) in tier ${item.tierId}`, "event"); handleItemDrop(e, item.tierId, item.id); }}
-              onDragEnd={cleanupDragStates}
-              data-item-id={item.id}
-              style={{ width: `${itemWidth}px`, height: `${itemHeight}px` }}
-              className={`relative flex items-center justify-center bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-sm shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md transition-all duration-200 group z-10 
-                ${draggedItemId === item.id ? 'opacity-30 ring-2 ring-indigo-500' : ''}
-                ${draggedOverItemId === item.id && draggedItemId !== item.id ? 'drag-over-item' : ''}`}
-            >
-              {item.type === 'image' ? (
-                <img src={item.value} alt={item.value || "Item"} className="w-full h-full object-contain pointer-events-none" onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/${itemWidth}x${itemHeight}/FF0000/FFFFFF?text=Error`; e.target.alt = "Image failed"; addLog(`Failed image: ${item.value}`, "error"); }} />
-              ) : (
-                <span className="text-sm font-medium text-gray-800 dark:text-gray-200 text-center p-1 break-words pointer-events-none">{item.value}</span>
-              )}
-              <button onClick={() => handleDeleteItem(item.id)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 z-20"> <Trash2Icon size={14} /> </button>
-            </div>
-          );
+            const handlePasteItems = () => {
+                const text = pasteItemsRef.current.value.trim(); if (!text) { addLog("Paste area empty.", "warning"); return; }
+                const newItems = text.split('\n').map(l => ({ id: generateId(), type: 'name', value: l.trim(), tierId: null })).filter(i => i.value);
+                setItems(p => [...p, ...newItems]); addLog(`Pasted ${newItems.length} items.`, "info"); pasteItemsRef.current.value = '';
+            };
 
-          return (
-            <div className={`min-h-screen font-sans p-0 transition-colors duration-300 ${theme.bg} ${theme.text}`}>
-              <div 
-                ref={appContainerRef}
-                className="relative mx-auto" 
-                style={{ width: `${containerWidth}px` }}
-              > 
-                <div className={`flex justify-between items-center p-4 ${theme.containerBg}`}>
-                  <input type="text" value={tierListTitle} onChange={(e) => setTierListTitle(e.target.value)} className={`text-3xl sm:text-4xl font-extrabold bg-transparent border-none focus:outline-none focus:ring-0 text-left w-full mr-4 ${theme.text}`} />
-                  <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`}> {darkMode ? <SunIcon size={24} /> : <MoonIcon size={24} />} </button>
-                </div>
+            const handleResetAllItemsToPool = () => {
+                setItems(prevItems => prevItems.map(item => ({ ...item, tierId: null })));
+                setTiers(prevTiers => prevTiers.map(tier => ({ ...tier, items: [] })));
+                addLog("All items reset to pool.", "action");
+            };
 
-                <div className="flex flex-col gap-0">
-                  <div className={`${theme.containerBg} w-full`}>
-                    {tiers.map((tier, index) => (
-                      <div 
-                        key={tier.id}
-                        data-tier-id={tier.id}
-                        onDragOver={(e) => handleTierRowDragOver(e, tier.id)}
-                        onDragLeave={(e) => handleTierRowDragLeave(e, tier.id)}
-                        onDrop={(e) => handleTierDrop(e, tier.id)}
-                        className={`flex items-stretch min-h-[100px] transition-all duration-200
-                          ${draggedOverTierRowId === tier.id && draggedTierId && draggedTierId !== tier.id ? 'tier-row-drop-target' : ''}
-                          ${index > 0 ? theme.borderColor : ''} ${index > 0 ? 'border-t' : ''}`}
-                      >
-                        <div 
-                          draggable="true"
-                          onDragStart={(e) => handleTierLabelDragStart(e, tier.id)}
-                          onDragEnd={cleanupDragStates} 
-                          className={`relative flex-shrink-0 w-24 sm:w-32 p-3 flex items-center justify-center text-center font-bold text-lg text-black group tier-label-draggable ${draggedTierId === tier.id ? 'tier-label-dragging' : ''}`}
-                          style={{ backgroundColor: tier.color }}
-                        >
-                          {tier.type === 'image' ? <img src={tier.value} alt="Tier" className="w-full h-auto max-h-full object-contain pointer-events-none" /> : <span className="pointer-events-none">{tier.value}</span>}
-                          <button onClick={() => handleDeleteTier(tier.id)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 z-10"> <Trash2Icon size={14} /> </button>
-                          <button onClick={() => startEditingTier(tier)} className="absolute top-1 left-1 bg-gray-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 z-10"> <PencilIcon size={14} /> </button>
-                        </div>
-                        
-                        <div 
-                          onDragEnter={(e) => handleTierAreaDragEnter(e, tier.id)}
-                          onDragOver={(e) => handleTierAreaDragOver(e, tier.id)}
-                          onDragLeave={(e) => handleTierAreaDragLeave(e, tier.id)}
-                          onDrop={(e) => { addLog(`TIER AREA onDrop: Tier ${tier.id}, BeforeItem=null`, "event"); handleItemDrop(e, tier.id, null);}}
-                          className={`flex-grow p-2 flex flex-wrap gap-2 items-start justify-start min-h-[100px] ${theme.containerBg} 
-                            ${draggedOverTierAreaId === tier.id && draggedItemId && !draggedOverItemId ? 'drag-over-tier-area' : ''}`}
-                        > 
-                          {tier.items.map(itemId => { const item = items.find(i => i.id === itemId); return item ? renderItem(item) : null; })}
-                          {tier.items.length === 0 && <p className={`${darkMode ? 'text-gray-500' : 'text-gray-400'} text-sm italic p-4 pointer-events-none`}>Drag items here...</p>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+            const handleDeleteItem = (id) => { setItems(p => p.filter(i => i.id !== id)); setTiers(p => p.map(t => ({ ...t, items: t.items.filter(itemId => itemId !== id) }))); addLog(`Deleted item ${id}`, "action"); };
+            const handleDeleteTier = (id) => { const tierDel = tiers.find(t=>t.id===id); if(tierDel) setItems(p=>p.map(i=>tierDel.items.includes(i.id)?{...i, tierId:null}:i)); setTiers(p => p.filter(t => t.id !== id)); if(editingTierId===id) cancelEditingTier(); addLog(`Deleted tier ${id}`, "action"); };
 
-                  <div 
-                    onDragEnter={(e) => handleTierAreaDragEnter(e, null)}
-                    onDragOver={(e) => handleTierAreaDragOver(e, null)}
-                    onDragLeave={(e) => handleTierAreaDragLeave(e, null)}
-                    onDrop={(e) => { addLog(`POOL AREA onDrop: BeforeItem=null`, "event"); handleItemDrop(e, null, null);}}
-                    className={`p-4 min-h-[150px] flex flex-col w-full ${theme.containerBg} ${theme.borderColor} border-t
-                      ${draggedOverTierAreaId === null && draggedItemId ? 'drag-over-tier-area' : ''}`}
-                  >
-                    <h2 className={`text-xl font-semibold ${theme.text} mb-3 flex items-center justify-center gap-2`}> 
-                        <GripVerticalIcon size={20} /> {itemPoolTitle} {/* Use state for item pool title */}
-                    </h2>
-                    <div className="flex flex-wrap gap-2 justify-center sm:justify-start flex-grow min-h-[100px]"> 
-                      {unassignedItems.length === 0 ? <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'} text-sm text-center w-full`}>Add or drag items here.</p> : unassignedItems.map(item => renderItem(item))}
-                    </div>
-                  </div>
-                </div>
+            const startEditingTier = (tier) => { setEditingTierId(tier.id); setEditingTierLabel(tier.type !== 'image' ? tier.value : ''); setEditingTierColor(tier.color); setEditingTierImageUrl(tier.type === 'image' && tier.value.startsWith('http') ? tier.value : ''); setEditingTierImageFile(null); if(editTierImageFileRef.current) editTierImageFileRef.current.value=''; if(editTierImageUrlRef.current) editTierImageUrlRef.current.value = (tier.type === 'image' && tier.value.startsWith('http') ? tier.value : ''); setShowConfiguration(true); addLog(`Editing tier ${tier.id}`, "info"); };
 
-                {/* Configuration Panel - Now contains Logs */}
-                <div className={`${theme.containerBg} p-4 w-full ${theme.borderColor} border-t`}>
-                  <h2 className={`text-2xl font-bold ${theme.text} mb-4 text-center flex items-center justify-center gap-2`}>
-                    <SettingsIcon size={24} /> Configuration
-                    <button onClick={() => setShowConfiguration(!showConfiguration)} className={`p-1 rounded-full ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-300 hover:bg-gray-400'}`}> {showConfiguration ? <ChevronUpIcon size={20} /> : <ChevronDownIcon size={20} />} </button>
-                  </h2>
-                  {showConfiguration && (
-                    <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6"> 
-                       <div className={`${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor} md:col-span-2 lg:col-span-3`}>
-                            <h3 className={`text-xl font-semibold ${darkMode ? 'text-purple-300':'text-purple-600'} mb-3 flex items-center gap-2`}> <SettingsIcon size={20}/> General Settings</h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <div>
-                                    <label htmlFor="itemWidth" className={`block text-sm font-medium ${theme.inputText}`}>Item Width (px):</label>
-                                    <input type="number" id="itemWidth" value={itemWidth} onChange={e => setItemWidth(Math.max(20, parseInt(e.target.value) || 80))} className={`mt-1 p-2 w-full border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
-                                </div>
-                                <div>
-                                    <label htmlFor="itemHeight" className={`block text-sm font-medium ${theme.inputText}`}>Item Height (px):</label>
-                                    <input type="number" id="itemHeight" value={itemHeight} onChange={e => setItemHeight(Math.max(20, parseInt(e.target.value) || 80))} className={`mt-1 p-2 w-full border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
-                                </div>
-                                <div className="lg:col-span-1"> {/* Item Pool Title */}
-                                    <label htmlFor="itemPoolTitleInput" className={`block text-sm font-medium ${theme.inputText}`}>Item Pool Title:</label>
-                                    <input
-                                        type="text"
-                                        id="itemPoolTitleInput"
-                                        value={itemPoolTitle}
-                                        onChange={(e) => { setItemPoolTitle(e.target.value); addLog(`Item Pool title changed to: ${e.target.value}`, "info"); }}
-                                        className={`mt-1 p-2 w-full border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}
-                                    />
-                                </div>
-                                <div className="sm:col-span-2 lg:col-span-3 mt-2"> {/* Reset Button spanning more columns */}
-                                    <button
-                                        onClick={handleResetAllItemsToPool}
-                                        className={`w-full py-2 px-4 rounded-sm shadow-md flex items-center justify-center gap-2 ${darkMode ? 'bg-red-700 hover:bg-red-800' : 'bg-red-500 hover:bg-red-600'} ${theme.buttonText}`}
-                                    >
-                                       <RotateCcwIcon size={18}/> Reset All Items to Pool
-                                    </button>
-                                </div>
+            const handleSaveEditedTier = () => {
+                if (!editingTierId) return;
+                let updatedValue = editingTierLabel.trim(); let updatedType = updatedValue.length === 1 ? 'letter' : 'name';
+                const save = (val, type, col) => { setTiers(p => p.map(t => t.id === editingTierId ? { ...t, value: val, type: type, color: col } : t)); addLog(`Saved tier ${editingTierId}`, "action"); cancelEditingTier();};
+                if (editTierImageUrlRef.current.value.trim()) {
+                    const url = editTierImageUrlRef.current.value.trim();
+                    if (!url.startsWith('http')) { addLog("Invalid URL for tier edit.", "error"); return; }
+                    save(url, 'image', editingTierColor);
+                } else if (editingTierImageFile) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => save(reader.result, 'image', editingTierColor);
+                    reader.readAsDataURL(editingTierImageFile);
+                } else if (updatedValue) {
+                    save(updatedValue, updatedType, editingTierColor);
+                } else {
+                    const currentTier = tiers.find(t => t.id === editingTierId);
+                    if (currentTier && currentTier.type === 'image') save(currentTier.value, 'image', editingTierColor);
+                    else addLog("Label cannot be empty for text tiers.", "warning");
+                }
+            };
+
+            const cancelEditingTier = () => { setEditingTierId(null); setEditingTierLabel(''); setEditingTierColor('#888888'); setEditingTierImageUrl(''); setEditingTierImageFile(null); if(editTierImageFileRef.current) editTierImageFileRef.current.value=''; if(editTierImageUrlRef.current) editTierImageUrlRef.current.value=''; addLog("Edit tier cancelled.", "info"); };
+
+            const cleanupDragStates = () => { setDraggedItemId(null); setDraggedTierId(null); setDraggedOverItemId(null); setDraggedOverTierRowId(null); setDraggedOverTierAreaId(null); };
+            const handleItemDragStart = (e, itemId) => { setDraggedItemId(itemId); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', itemId); };
+            const handleItemDragEnter = (e, targetItemId, targetItemTierId) => { e.preventDefault(); e.stopPropagation(); if (draggedItemId && draggedItemId !== targetItemId) { setDraggedOverItemId(targetItemId); setDraggedOverTierAreaId(targetItemTierId); } };
+            const handleItemDragOver = (e, targetItemId, targetItemTierId) => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'move'; if (draggedItemId && draggedItemId !== targetItemId) { setDraggedOverItemId(targetItemId); setDraggedOverTierAreaId(targetItemTierId); } };
+            const handleItemDragLeave = (e, itemId) => { e.stopPropagation(); if (!e.currentTarget.contains(e.relatedTarget)) { setDraggedOverItemId(null); } };
+            const handleTierAreaDragEnter = (e, tierIdContext) => { e.preventDefault(); e.stopPropagation(); if (draggedItemId) { setDraggedOverTierAreaId(tierIdContext); setDraggedOverItemId(null); } };
+            const handleTierAreaDragOver = (e, tierIdContext) => { e.preventDefault(); e.stopPropagation(); if (draggedItemId) { e.dataTransfer.dropEffect = 'move'; setDraggedOverTierAreaId(tierIdContext); setDraggedOverItemId(null); } };
+            const handleTierAreaDragLeave = (e, tierIdContext) => { e.stopPropagation(); if (!e.currentTarget.contains(e.relatedTarget) && draggedItemId) { setDraggedOverTierAreaId(null); } };
+            const handleTierLabelDragStart = (e, tierId) => { setDraggedTierId(tierId); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', tierId); };
+            const handleTierRowDragOver = (e, targetTierId) => { e.preventDefault(); if (draggedTierId && draggedTierId !== targetTierId) { e.dataTransfer.dropEffect = 'move'; setDraggedOverTierRowId(targetTierId); } else if (draggedItemId) { e.dataTransfer.dropEffect = 'move'; } };
+            const handleTierRowDragLeave = (e, tierId) => { if (!e.currentTarget.contains(e.relatedTarget) && draggedTierId) { setDraggedOverTierRowId(null); } };
+
+            const handleItemDrop = (e, targetTierId, beforeItemId = null) => {
+                e.preventDefault(); e.stopPropagation();
+                const droppedItemId = draggedItemId || e.dataTransfer.getData('text/plain');
+                if (!droppedItemId || draggedTierId) { cleanupDragStates(); return; }
+                const itemToMove = items.find(i => i.id === droppedItemId);
+                if (!itemToMove) { cleanupDragStates(); return; }
+
+                setItems(prev => prev.map(i => i.id === droppedItemId ? { ...i, tierId: targetTierId } : i));
+                setTiers(prev => {
+                    let newTiers = prev.map(t => t.id === itemToMove.tierId ? { ...t, items: t.items.filter(id => id !== droppedItemId) } : t);
+                    if (targetTierId) {
+                        newTiers = newTiers.map(t => {
+                            if (t.id === targetTierId) {
+                                let newItemsInTier = t.items.filter(id => id !== droppedItemId);
+                                const idx = beforeItemId ? newItemsInTier.indexOf(beforeItemId) : -1;
+                                if (idx !== -1) newItemsInTier.splice(idx, 0, droppedItemId); else newItemsInTier.push(droppedItemId);
+                                return { ...t, items: newItemsInTier };
+                            } return t;
+                        });
+                    } return newTiers;
+                });
+                cleanupDragStates();
+            };
+
+            const handleTierDrop = (e, targetTierId) => {
+                e.preventDefault();
+                const dTierId = draggedTierId || e.dataTransfer.getData('text/plain');
+                if (!dTierId || dTierId === targetTierId || draggedItemId) { cleanupDragStates(); return; }
+                setTiers(prev => {
+                    const dTier = prev.find(t => t.id === dTierId); if (!dTier) return prev;
+                    const remaining = prev.filter(t => t.id !== dTierId);
+                    const targetIdx = remaining.findIndex(t => t.id === targetTierId);
+                    if (targetIdx !== -1) remaining.splice(targetIdx, 0, dTier); else remaining.push(dTier);
+                    return remaining;
+                });
+                cleanupDragStates();
+            };
+
+            const handleResizeMouseDown = (e) => {
+                e.preventDefault(); setIsResizing(true);
+                resizeDragStartRef.current = { x: e.clientX, width: appContainerRef.current ? appContainerRef.current.offsetWidth : containerWidth };
+            };
+            const mouseMoveHandlerRef = useRef(); const mouseUpHandlerRef = useRef();
+            useEffect(() => {
+                mouseMoveHandlerRef.current = (e) => {
+                    if (!isResizingRef.current) return;
+                    const { x: initialX, width: initialWidth } = resizeDragStartRef.current;
+                    const newWidth = Math.max(600, Math.min(initialWidth + ((e.clientX - initialX) * 2), window.innerWidth));
+                    setContainerWidth(newWidth);
+                };
+                mouseUpHandlerRef.current = () => { if (isResizingRef.current) setIsResizing(false); };
+            });
+            useEffect(() => {
+                const handleMove = e => mouseMoveHandlerRef.current(e);
+                const handleUp = () => mouseUpHandlerRef.current();
+                if (isResizing) {
+                    document.addEventListener('mousemove', handleMove);
+                    document.addEventListener('mouseup', handleUp);
+                }
+                return () => {
+                    document.removeEventListener('mousemove', handleMove);
+                    document.removeEventListener('mouseup', handleUp);
+                };
+            }, [isResizing]);
+
+            const theme = {
+                darkMode,
+                bg: darkMode ? 'bg-black' : 'bg-gray-100',
+                text: darkMode ? 'text-gray-100' : 'text-gray-900',
+                containerBg: darkMode ? 'bg-gray-900' : 'bg-white',
+                itemBg: darkMode ? 'bg-gray-800' : 'bg-white',
+                inputBg: darkMode ? 'bg-gray-700' : 'bg-gray-50',
+                inputText: darkMode ? 'text-gray-200' : 'text-gray-800',
+                placeholderText: darkMode ? 'placeholder-gray-400' : 'placeholder-gray-500',
+                borderColor: darkMode ? 'border-gray-700' : 'border-gray-300',
+                buttonPrimaryBg: darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600',
+                buttonSecondaryBg: darkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-500 hover:bg-gray-600',
+                buttonText: 'text-white',
+                sectionBg: darkMode ? 'bg-gray-800' : 'bg-gray-50',
+            };
+
+            const dragState = { draggedItemId, draggedTierId, draggedOverItemId, draggedOverTierRowId, draggedOverTierAreaId };
+            const itemProps = { itemWidth, itemHeight, tierLabelWidth };
+            const itemSetters = { setItemWidth, setItemHeight, setTierLabelWidth };
+            const allHandlers = { handleItemDragStart, handleItemDragEnter, handleItemDragOver, handleItemDragLeave, handleItemDrop, handleTierAreaDragEnter, handleTierAreaDragOver, handleTierAreaDragLeave, handleTierLabelDragStart, handleTierRowDragOver, handleTierRowDragLeave, handleTierDrop, handleDeleteItem, handleDeleteTier, startEditingTier, cleanupDragStates, addLog, handleAddTier, handleAddItem, handlePasteItems, handleResetAllItemsToPool, handleSaveEditedTier, cancelEditingTier };
+            const uiState = { showConfiguration, editingTierId, showLogs };
+            const uiSetters = { setShowConfiguration, setShowLogs };
+            const data = { logs, standardColors };
+            const editState = { editingTierLabel, editingTierColor, editingTierImageFile, editingTierImageUrl, newTierColor };
+            const editSetters = { setEditingTierLabel, setEditingTierColor, setEditingTierImageFile, setEditingTierImageUrl, setNewTierColor };
+            const refs = { newTierNameRef, newTierImageRef, newItemNameRef, newItemImageFileRef, newItemImageUrlRef, pasteItemsRef, editTierImageFileRef, editTierImageUrlRef };
+
+            return (
+                <div className={`min-h-screen font-sans p-0 transition-colors duration-300 ${theme.bg} ${theme.text}`}>
+                    <div ref={appContainerRef} className="relative mx-auto flex flex-col min-h-screen max-w-full" style={{ width: `${containerWidth}px` }}>
+                        <div className={`flex justify-between items-center p-4 ${theme.containerBg}`}>
+                            <input type="text" value={tierListTitle} onChange={(e) => setTierListTitle(e.target.value)} className={`text-3xl sm:text-4xl font-extrabold bg-transparent border-none focus:outline-none focus:ring-0 text-left w-full mr-4 ${theme.text}`} />
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => setContainerWidth(window.innerWidth)} className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`}>
+                                    Fit
+                                </button>
+                                <button onClick={toggleFullScreen} className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`}>
+                                    {isFullscreen ? <MinimizeIcon size={24} /> : <MaximizeIcon size={24} />}
+                                </button>
+                                <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`}>
+                                    {darkMode ? <SunIcon size={24} /> : <MoonIcon size={24} />}
+                                </button>
                             </div>
                         </div>
 
+                        <div className="flex flex-col gap-0 flex-grow">
+                            <div className={`${theme.containerBg} w-full`}>
+                                {tiers.map((tier, index) => (
+                                    <TierRow key={tier.id} tier={tier} items={items} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} index={index} deleteMode={deleteMode} />
+                                ))}
+                            </div>
+                            <ItemPool items={items} itemPoolTitle={itemPoolTitle} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} deleteMode={deleteMode} />
+                        </div>
 
-                      {editingTierId ? (
-                        <div className={`${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor}`}>
-                          <h3 className={`text-xl font-semibold ${darkMode ? 'text-indigo-300':'text-indigo-600'} mb-2 flex items-center gap-2`}> <PencilIcon size={20}/> Edit Tier</h3>
-                          <input type="text" value={editingTierLabel} onChange={e=>setEditingTierLabel(e.target.value)} placeholder="Label" className={`w-full p-2 mb-2 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
-                          <input type="text" ref={editTierImageUrlRef} defaultValue={editingTierImageUrl} onChange={e=>setEditingTierImageUrl(e.target.value)} placeholder="Image URL" className={`w-full p-2 mb-2 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
-                          <input type="file" ref={editTierImageFileRef} onChange={e=>setEditingTierImageFile(e.target.files[0])} accept="image/*" className={`w-full mb-2 text-sm ${theme.inputText} file:mr-2 file:py-1 file:px-3 file:rounded-sm file:border-0 ${darkMode ? 'file:bg-indigo-700 file:text-indigo-100':'file:bg-indigo-200 file:text-indigo-700'}`}/>
-                          <div className="flex items-center gap-2 mb-2"> {standardColors.map(c=><button key={c} onClick={()=>setEditingTierColor(c)} className={`w-7 h-7 rounded-full border-2 ${editingTierColor===c?(darkMode?'border-white':'border-black'):'border-transparent'}`} style={{backgroundColor:c}}/>)} </div>
-                          <div className="flex items-center gap-2 mb-3">
-                            <input type="color" value={editingTierColor} onChange={e=>setEditingTierColor(e.target.value)} className={`w-9 h-9 rounded-sm ${darkMode?'border-gray-600':'border-gray-400'} border`}/>
-                            <input type="text" value={editingTierColor} onChange={e=>handleHexColorChange(e,true)} placeholder="#hex" className={`p-2 w-28 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
-                          </div>
-                          <div className="flex gap-2"><button onClick={handleSaveEditedTier} className={`flex-1 py-2 ${darkMode?'bg-indigo-600 hover:bg-indigo-700':'bg-indigo-500 hover:bg-indigo-600'} ${theme.buttonText} rounded-sm`}>Save</button> <button onClick={cancelEditingTier} className={`flex-1 py-2 ${theme.buttonSecondaryBg} ${theme.buttonText} rounded-sm`}>Cancel</button></div>
-                        </div>
-                      ) : (
-                        <div className={`${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor}`}>
-                          <h3 className={`text-xl font-semibold ${darkMode ? 'text-blue-300':'text-blue-600'} mb-2 flex items-center gap-2`}> <PlusCircleIcon size={20}/> Create Tier</h3>
-                          <input type="text" ref={newTierNameRef} placeholder="Label" className={`w-full p-2 mb-2 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
-                          <input type="file" ref={newTierImageRef} accept="image/*" className={`w-full mb-2 text-sm ${theme.inputText} file:mr-2 file:py-1 file:px-3 file:rounded-sm file:border-0 ${darkMode ? 'file:bg-blue-800 file:text-blue-100':'file:bg-blue-200 file:text-blue-700'}`}/>
-                          <div className="flex items-center gap-2 mb-2"> {standardColors.map(c=><button key={c} onClick={()=>setNewTierColor(c)} className={`w-7 h-7 rounded-full border-2 ${newTierColor===c?(darkMode?'border-white':'border-black'):'border-transparent'}`} style={{backgroundColor:c}}/>)} </div>
-                          <div className="flex items-center gap-2 mb-3">
-                            <input type="color" value={newTierColor} onChange={e=>setNewTierColor(e.target.value)} className={`w-9 h-9 rounded-sm ${darkMode?'border-gray-600':'border-gray-400'} border`}/>
-                            <input type="text" value={newTierColor} onChange={e=>handleHexColorChange(e,false)} placeholder="#hex" className={`p-2 w-28 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
-                          </div>
-                          <button onClick={handleAddTier} className={`w-full py-2 ${theme.buttonPrimaryBg} ${theme.buttonText} rounded-sm`}>Add Tier</button>
-                        </div>
-                      )}
-                      <div className={`${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor}`}>
-                        <h3 className={`text-xl font-semibold ${darkMode ? 'text-green-300':'text-green-600'} mb-2 flex items-center gap-2`}> <PlusCircleIcon size={20}/> Add Item</h3>
-                        <input type="text" ref={newItemNameRef} placeholder="Name" className={`w-full p-2 mb-2 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
-                        <input type="text" ref={newItemImageUrlRef} placeholder="Image URL" className={`w-full p-2 mb-2 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
-                        <input type="file" ref={newItemImageFileRef} accept="image/*" className={`w-full mb-3 text-sm ${theme.inputText} file:mr-2 file:py-1 file:px-3 file:rounded-sm file:border-0 ${darkMode ? 'file:bg-green-800 file:text-green-100':'file:bg-green-200 file:text-green-700'}`}/>
-                        <button onClick={handleAddItem} className={`w-full py-2 ${darkMode?'bg-green-600 hover:bg-green-700':'bg-green-500 hover:bg-green-600'} ${theme.buttonText} rounded-sm`}>Add Item</button>
-                      </div>
-                      <div className={`${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor}`}>
-                        <h3 className={`text-xl font-semibold ${darkMode ? 'text-yellow-300':'text-yellow-600'} mb-2 flex items-center gap-2`}> <ListIcon size={20}/> Paste Items</h3>
-                        <textarea ref={pasteItemsRef} rows="5" placeholder="One per line" className={`w-full p-2 mb-3 border ${theme.borderColor} rounded-sm resize-y ${theme.inputBg} ${theme.inputText}`}></textarea>
-                        <button onClick={handlePasteItems} className={`w-full py-2 ${darkMode?'bg-yellow-600 hover:bg-yellow-700':'bg-yellow-500 hover:bg-yellow-600'} ${theme.buttonText} rounded-sm`}>Add Pasted</button>
-                      </div>
+                        <ConfigurationPanel
+                            theme={theme}
+                            uiState={uiState}
+                            uiSetters={uiSetters}
+                            data={data}
+                            dataHandlers={allHandlers}
+                            editState={editState}
+                            editSetters={editSetters}
+                            refs={refs}
+                            itemProps={itemProps}
+                            itemSetters={itemSetters}
+                            deleteMode={deleteMode}
+                            setDeleteMode={setDeleteMode}
+                        />
+
+                        <div className="resize-handle" onMouseDown={handleResizeMouseDown}><div className="resize-handle-visual"></div></div>
                     </div>
-                    
-                    <div className={`${theme.containerBg} p-0 w-full ${darkMode ? 'border-t border-gray-700' : 'border-t border-gray-300'} mt-4 pt-4`}>
-                      <h3 className={`text-xl font-semibold ${theme.text} mb-3 text-center flex items-center justify-center gap-2`}>
-                        <FileTextIcon size={20} /> Application Logs
-                        <button onClick={()=>setShowLogs(!showLogs)} className={`p-1 rounded-full ${darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>{showLogs?<ChevronUpIcon size={18}/>:<ChevronDownIcon size={18}/>}</button>
-                      </h3>
-                      {showLogs && (<>
-                        <div className="flex gap-2 mb-3"> <button onClick={copyLogsToClipboard} className={`flex-1 py-1.5 px-3 rounded-sm ${darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>Copy</button> <button onClick={selectAllLogs} className={`flex-1 py-1.5 px-3 rounded-sm ${darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>Select All</button> </div>
-                        <div className={`log-display-area flex flex-col gap-1 ${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor} max-h-60 overflow-y-auto text-left`}>
-                          {logs.length === 0 ? <p className={`${darkMode?'text-gray-400':'text-gray-600'} text-sm`}>No logs.</p> : logs.map((l,i)=>(
-                            <p key={i} className={`text-xs font-mono ${l.type==='error'?(darkMode?'text-red-400':'text-red-600'):l.type==='warning'?(darkMode?'text-yellow-400':'text-yellow-600'):l.type==='action'?(darkMode?'text-blue-300':'text-blue-600'):l.type==='event'?(darkMode?'text-purple-300':'text-purple-600'):(darkMode?'text-gray-300':'text-gray-700')}`}>
-                              <span className={`${darkMode?'text-gray-500':'text-gray-400'}`}>{l.timestamp}</span> <span className={`font-bold ${l.type==='error'?(darkMode?'text-red-500':'text-red-700'):l.type==='warning'?(darkMode?'text-yellow-500':'text-yellow-700'):l.type==='action'?(darkMode?'text-blue-400':'text-blue-700'):l.type==='event'?(darkMode?'text-purple-400':'text-purple-700'):(darkMode?'text-gray-400':'text-gray-500')}`}>[{l.type.toUpperCase()}]</span> {l.message}
-                            </p>
-                          ))}
-                        </div></>
-                      )}
-                    </div>
-                    </>
-                  )}
                 </div>
-                {/* Resize Handle */}
-                <div 
-                    className="resize-handle"
-                    onMouseDown={handleResizeMouseDown}
-                >
-                    <div className="resize-handle-visual"></div>
-                </div>
-              </div>
-            </div>
-          );
+            );
         }
+
         ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     </script>
 </body>
