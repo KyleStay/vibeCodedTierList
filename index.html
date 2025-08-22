@@ -94,7 +94,7 @@
 
         const DraggableItem = memo(({ item, itemWidth, itemHeight, theme, draggedItemId, draggedOverItemId, handlers, addLog, deleteMode, finalizeMode }) => (
             <div
-                draggable="true"
+                draggable={!finalizeMode}
                 onDragStart={(e) => handlers.handleItemDragStart(e, item.id)}
                 onDragEnter={(e) => handlers.handleItemDragEnter(e, item.id, item.tierId)}
                 onDragOver={(e) => handlers.handleItemDragOver(e, item.id, item.tierId)}
@@ -430,8 +430,40 @@
                 let newTier = { id: generateId(), items: [], color: newTierColor };
                 if (file) {
                     const reader = new FileReader();
-                    reader.onloadend = () => { newTier.type = 'image'; newTier.value = reader.result; setTiers(p => [...p, newTier]); addLog("Added image tier.", "info"); };
-                    reader.onerror = () => addLog("Error reading tier image.", "error"); reader.readAsDataURL(file);
+                    reader.onloadend = () => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const maxWidth = itemWidth * 2;
+                            const maxHeight = itemHeight * 2;
+                            let width = img.width;
+                            let height = img.height;
+
+                            if (width > height) {
+                                if (width > maxWidth) {
+                                    height *= maxWidth / width;
+                                    width = maxWidth;
+                                }
+                            } else {
+                                if (height > maxHeight) {
+                                    width *= maxHeight / height;
+                                    height = maxHeight;
+                                }
+                            }
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
+
+                            newTier.type = 'image';
+                            newTier.value = canvas.toDataURL('image/png');
+                            setTiers(p => [...p, newTier]);
+                            addLog("Added and resized image tier.", "info");
+                        };
+                        img.src = reader.result;
+                    };
+                    reader.onerror = () => addLog("Error reading tier image.", "error");
+                    reader.readAsDataURL(file);
                 } else { newTier.type = name.length === 1 ? 'letter' : 'name'; newTier.value = name; setTiers(p => [...p, newTier]); addLog(`Added text tier: ${name}`, "info"); }
                 newTierNameRef.current.value = ''; if (newTierImageRef.current) newTierImageRef.current.value = '';
             };
@@ -445,8 +477,40 @@
                     newItem.type = 'image'; newItem.value = url; setItems(p => [...p, newItem]); addLog("Added URL item.", "info");
                 } else if (file) {
                     const reader = new FileReader();
-                    reader.onloadend = () => { newItem.type = 'image'; newItem.value = reader.result; setItems(p => [...p, newItem]); addLog("Added file item.", "info"); };
-                    reader.onerror = () => addLog("Error item image.", "error"); reader.readAsDataURL(file);
+                    reader.onloadend = () => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const maxWidth = itemWidth * 2;
+                            const maxHeight = itemHeight * 2;
+                            let width = img.width;
+                            let height = img.height;
+
+                            if (width > height) {
+                                if (width > maxWidth) {
+                                    height *= maxWidth / width;
+                                    width = maxWidth;
+                                }
+                            } else {
+                                if (height > maxHeight) {
+                                    width *= maxHeight / height;
+                                    height = maxHeight;
+                                }
+                            }
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
+
+                            newItem.type = 'image';
+                            newItem.value = canvas.toDataURL('image/png');
+                            setItems(p => [...p, newItem]);
+                            addLog("Added and resized file item.", "info");
+                        };
+                        img.src = reader.result;
+                    };
+                    reader.onerror = () => addLog("Error reading item image.", "error");
+                    reader.readAsDataURL(file);
                 } else { newItem.type = 'name'; newItem.value = name; setItems(p => [...p, newItem]); addLog(`Added text item: ${name}`, "info"); }
                 newItemNameRef.current.value = ''; if (newItemImageUrlRef.current) newItemImageUrlRef.current.value = ''; if (newItemImageFileRef.current) newItemImageFileRef.current.value = '';
             };
@@ -478,7 +542,35 @@
                     save(url, 'image', editingTierColor);
                 } else if (editingTierImageFile) {
                     const reader = new FileReader();
-                    reader.onloadend = () => save(reader.result, 'image', editingTierColor);
+                    reader.onloadend = () => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const maxWidth = itemWidth * 2;
+                            const maxHeight = itemHeight * 2;
+                            let width = img.width;
+                            let height = img.height;
+
+                            if (width > height) {
+                                if (width > maxWidth) {
+                                    height *= maxWidth / width;
+                                    width = maxWidth;
+                                }
+                            } else {
+                                if (height > maxHeight) {
+                                    width *= maxHeight / height;
+                                    height = maxHeight;
+                                }
+                            }
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
+
+                            save(canvas.toDataURL('image/png'), 'image', editingTierColor);
+                        };
+                        img.src = reader.result;
+                    };
                     reader.readAsDataURL(editingTierImageFile);
                 } else if (updatedValue) {
                     save(updatedValue, updatedType, editingTierColor);
