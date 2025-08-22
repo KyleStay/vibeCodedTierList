@@ -101,6 +101,7 @@
                 onDragLeave={(e) => handlers.handleItemDragLeave(e, item.id)}
                 onDrop={(e) => handlers.handleItemDrop(e, item.tierId, item.id)}
                 onDragEnd={handlers.cleanupDragStates}
+                onTouchStart={(e) => handlers.handleTouchStart(e, item.id)}
                 style={{ width: `${itemWidth}px`, height: `${itemHeight}px` }}
                 className={`relative z-10 cursor-grab active:cursor-grabbing
                     ${draggedItemId === item.id ? 'opacity-30' : ''}`}
@@ -125,7 +126,7 @@
             </div>
         ));
 
-        const TierRow = ({ tier, items, theme, dragState, handlers, itemProps, index, deleteMode }) => {
+        const TierRow = ({ tier, items, theme, dragState, handlers, itemProps, index, deleteMode, finalizeMode }) => {
             const { draggedTierId, draggedOverTierRowId, draggedOverTierAreaId, draggedItemId, draggedOverItemId } = dragState;
             const tierItems = tier.items.map(itemId => items.find(i => i.id === itemId)).filter(Boolean);
 
@@ -158,13 +159,13 @@
                             ${draggedOverTierAreaId === tier.id && draggedItemId && !draggedOverItemId ? 'drag-over-tier-area' : ''}`}
                     >
                         {tierItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} />)}
-                        {tierItems.length === 0 && <p className={`${theme.darkMode ? 'text-gray-500' : 'text-gray-400'} text-sm italic p-4 pointer-events-none`}>Drag items here...</p>}
+                        {tierItems.length === 0 && !finalizeMode && <p className={`${theme.darkMode ? 'text-gray-500' : 'text-gray-400'} text-sm italic p-4 pointer-events-none`}>Drag items here...</p>}
                     </div>
                 </div>
             );
         };
 
-        const ItemPool = ({ items, itemPoolTitle, theme, dragState, handlers, itemProps, deleteMode }) => {
+        const ItemPool = ({ items, itemPoolTitle, theme, dragState, handlers, itemProps, deleteMode, finalizeMode }) => {
             const { draggedOverTierAreaId, draggedItemId, draggedOverItemId } = dragState;
             const unassignedItems = items.filter(item => item.tierId === null);
 
@@ -179,7 +180,7 @@
                 >
                     <h2 className={`text-xl font-semibold ${theme.text} mb-3 flex items-center justify-center gap-2`}><GripVerticalIcon size={20} /> {itemPoolTitle}</h2>
                     <div className="flex flex-wrap gap-2 justify-center sm:justify-start flex-grow min-h-[100px]">
-                        {unassignedItems.length === 0 ? <p className={`${theme.darkMode ? 'text-gray-400' : 'text-gray-600'} text-sm text-center w-full`}>Add or drag items here.</p> :
+                        {unassignedItems.length === 0 && !finalizeMode ? <p className={`${theme.darkMode ? 'text-gray-400' : 'text-gray-600'} text-sm text-center w-full`}>Add or drag items here.</p> :
                             unassignedItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} />)
                         }
                     </div>
@@ -365,6 +366,7 @@
             const [tierLabelWidth, setTierLabelWidth] = useState(initialData?.tierLabelWidth || 128);
             const [deleteMode, setDeleteMode] = useState(false);
             const [isFullscreen, setIsFullscreen] = useState(false);
+            const [finalizeMode, setFinalizeMode] = useState(false);
 
             const [isResizing, setIsResizing] = useState(false);
             const [showConfiguration, setShowConfiguration] = useState(true);
@@ -375,6 +377,7 @@
             const [draggedOverItemId, setDraggedOverItemId] = useState(null);
             const [draggedOverTierRowId, setDraggedOverTierRowId] = useState(null);
             const [draggedOverTierAreaId, setDraggedOverTierAreaId] = useState(null);
+            const [touchDragState, setTouchDragState] = useState(null);
 
             const [editingTierId, setEditingTierId] = useState(null);
             const [editingTierLabel, setEditingTierLabel] = useState('');
@@ -486,7 +489,7 @@
 
             const cancelEditingTier = () => { setEditingTierId(null); setEditingTierLabel(''); setEditingTierColor('#888888'); setEditingTierImageUrl(''); setEditingTierImageFile(null); if(editTierImageFileRef.current) editTierImageFileRef.current.value=''; if(editTierImageUrlRef.current) editTierImageUrlRef.current.value=''; addLog("Edit tier cancelled.", "info"); };
 
-            const cleanupDragStates = () => { setDraggedItemId(null); setDraggedTierId(null); setDraggedOverItemId(null); setDraggedOverTierRowId(null); setDraggedOverTierAreaId(null); };
+            const cleanupDragStates = () => { setDraggedItemId(null); setDraggedTierId(null); setDraggedOverItemId(null); setDraggedOverTierRowId(null); setDraggedOverTierAreaId(null); setTouchDragState(null); };
             const handleItemDragStart = (e, itemId) => { setDraggedItemId(itemId); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', itemId); };
             const handleItemDragEnter = (e, targetItemId, targetItemTierId) => { e.preventDefault(); e.stopPropagation(); if (draggedItemId && draggedItemId !== targetItemId) { setDraggedOverItemId(targetItemId); setDraggedOverTierAreaId(targetItemTierId); } };
             const handleItemDragOver = (e, targetItemId, targetItemTierId) => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'move'; if (draggedItemId && draggedItemId !== targetItemId) { setDraggedOverItemId(targetItemId); setDraggedOverTierAreaId(targetItemTierId); } };
@@ -596,6 +599,9 @@
                         <div className={`flex justify-between items-center p-4 ${theme.containerBg}`}>
                             <input type="text" value={tierListTitle} onChange={(e) => setTierListTitle(e.target.value)} className={`text-3xl sm:text-4xl font-extrabold bg-transparent border-none focus:outline-none focus:ring-0 text-left w-full mr-4 ${theme.text}`} />
                             <div className="flex items-center gap-2">
+                                <button onClick={() => setFinalizeMode(!finalizeMode)} className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`}>
+                                    {finalizeMode ? 'Edit' : 'Finalize'}
+                                </button>
                                 <button onClick={() => setContainerWidth(window.innerWidth)} className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`}>
                                     Fit
                                 </button>
@@ -611,13 +617,13 @@
                         <div className="flex flex-col gap-0 flex-grow">
                             <div className={`${theme.containerBg} w-full`}>
                                 {tiers.map((tier, index) => (
-                                    <TierRow key={tier.id} tier={tier} items={items} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} index={index} deleteMode={deleteMode} />
+                                    <TierRow key={tier.id} tier={tier} items={items} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} index={index} deleteMode={deleteMode} finalizeMode={finalizeMode} />
                                 ))}
                             </div>
-                            <ItemPool items={items} itemPoolTitle={itemPoolTitle} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} deleteMode={deleteMode} />
+                            <ItemPool items={items} itemPoolTitle={itemPoolTitle} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} deleteMode={deleteMode} finalizeMode={finalizeMode} />
                         </div>
 
-                        <ConfigurationPanel
+                        {!finalizeMode && <ConfigurationPanel
                             theme={theme}
                             uiState={uiState}
                             uiSetters={uiSetters}
@@ -630,7 +636,7 @@
                             itemSetters={itemSetters}
                             deleteMode={deleteMode}
                             setDeleteMode={setDeleteMode}
-                        />
+                        />}
 
                         <div className="resize-handle" onMouseDown={handleResizeMouseDown}><div className="resize-handle-visual"></div></div>
                     </div>
