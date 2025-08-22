@@ -341,7 +341,7 @@
                                             type="file"
                                             ref={importFileRef}
                                             onChange={dataHandlers.handleImportState}
-                                            accept=".json"
+                                            accept=".tierlist,.json"
                                             className="hidden"
                                         />
                                         <button
@@ -469,7 +469,7 @@
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'tier-list-state.json';
+                a.download = 'tier-list-state.tierlist';
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
