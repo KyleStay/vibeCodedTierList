@@ -9,6 +9,8 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Library to render DOM elements to a canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -73,7 +75,9 @@
         const MinimizeIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>;
         const DownloadIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
         const UploadIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>;
-        const HelpCircleIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>;
+        const XIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+        const ImageIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>;
+        const HelpCircleIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
 
         // --- STATE VALIDATION & SERIALIZATION ---
         const validateStateData = (parsedData) => {
@@ -118,46 +122,6 @@
         };
 
         // --- UI COMPONENTS ---
-        const CommandsPopover = ({ onClose, theme }) => {
-            const commands = [
-                { keys: ['/', '?'], desc: 'Toggle this help menu' },
-                { keys: ['F'], desc: 'Toggle fullscreen mode' },
-                { keys: ['N', 'E'], desc: 'Select next item in the pool' },
-                { keys: ['Space', 'Enter'], desc: 'Select / Deselect focused item or tier' },
-                { keys: ['Esc'], desc: 'Deselect current item/tier or close this menu' },
-                { keys: ['↑', '↓', 'W', 'S'], desc: 'Navigate / Move selected item / Reorder tier' },
-                { keys: ['←', '→', 'A', 'D'], desc: 'Navigate / Reorder selected item' },
-            ];
-
-            const Key = ({ children }) => (
-                <kbd className={`px-2 py-1 text-xs font-sans font-semibold ${theme.darkMode ? 'text-gray-100 bg-gray-600' : 'text-gray-800 bg-gray-200'} border ${theme.darkMode ? 'border-gray-500' : 'border-gray-300'} rounded`}>
-                    {children}
-                </kbd>
-            );
-
-            return (
-                <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="commands-title">
-                    <div className={`relative w-full max-w-lg m-4 p-6 rounded-lg shadow-xl ${theme.containerBg} ${theme.borderColor} border`} onClick={e => e.stopPropagation()}>
-                        <h2 id="commands-title" className={`text-2xl font-bold mb-4 flex items-center gap-2 ${theme.text}`}>
-                            <HelpCircleIcon /> Keyboard Commands
-                        </h2>
-                        <ul className="space-y-3">
-                            {commands.map((cmd, index) => (
-                                <li key={index} className="flex items-center justify-between">
-                                    <span className={`text-base ${theme.inputText}`}>{cmd.desc}</span>
-                                    <div className="flex items-center gap-1">
-                                        {cmd.keys.map(key => <Key key={key}>{key}</Key>)}
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
-                         <button onClick={onClose} className={`absolute top-4 right-4 p-1 rounded-full ${theme.darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-black hover:bg-gray-200'}`} aria-label="Close keyboard commands">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                        </button>
-                    </div>
-                </div>
-            );
-        };
 
         const DraggableItem = memo(({ item, itemWidth, itemHeight, theme, draggedItemId, draggedOverItemId, handlers, addLog, deleteMode, selectedItemId }) => (
             <div
@@ -176,8 +140,8 @@
                 onDragEnd={handlers.cleanupDragStates}
                 style={{ width: `${itemWidth}px`, height: `${itemHeight}px` }}
                 className={`relative z-10 cursor-grab active:cursor-grabbing
-                    ${draggedItemId === item.id ? 'opacity-30' : ''}
-                    ${selectedItemId === item.id ? 'keyboard-selected' : ''}`}
+                        ${draggedItemId === item.id ? 'opacity-30' : ''}
+                        ${selectedItemId === item.id ? 'keyboard-selected' : ''}`}
             >
                 <div
                     className={`w-full h-full flex items-center justify-center overflow-hidden ${theme.itemBg} border ${theme.borderColor} rounded-sm shadow-sm transition-all duration-200
@@ -185,7 +149,7 @@
                     ${draggedOverItemId === item.id && draggedItemId !== item.id ? 'drag-over-item' : ''}`}
                 >
                     {item.type === 'image' ? (
-                        <img src={item.value} alt={item.value || "Item"} className="w-full h-full object-contain pointer-events-none" onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/${itemWidth}x${itemHeight}/FF0000/FFFFFF?text=Error`; e.target.alt = "Image failed"; addLog(`Failed image: ${item.value}`, "error"); }} />
+                        <img src={item.value} alt={item.value || "Item"} className="w-full h-full object-contain pointer-events-none" crossOrigin="anonymous" onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/${itemWidth}x${itemHeight}/FF0000/FFFFFF?text=Error`; e.target.alt = "Image failed"; addLog(`Failed image: ${item.value}`, "error"); }} />
                     ) : (
                         <span className={`text-sm font-medium ${theme.inputText} text-center p-1 break-all pointer-events-none`}>{item.value}</span>
                     )}
@@ -210,9 +174,9 @@
                     onDragLeave={(e) => handlers.handleTierRowDragLeave(e, tier.id)}
                     onDrop={(e) => handlers.handleTierDrop(e, tier.id)}
                     className={`flex items-stretch min-h-[100px] transition-all duration-200
-                        ${draggedOverTierRowId === tier.id && draggedTierId && draggedTierId !== tier.id ? 'tier-row-drop-target' : ''}
-                        ${theme.borderColor} border-t
-                        ${index === totalTiers - 1 ? 'border-b' : ''}`}
+                            ${draggedOverTierRowId === tier.id && draggedTierId && draggedTierId !== tier.id ? 'tier-row-drop-target' : ''}
+                            ${theme.borderColor} border-t
+                            ${index === totalTiers - 1 ? 'border-b' : ''}`}
                 >
                     <div
                         id={`tier-label-${tier.id}`}
@@ -259,7 +223,7 @@
                     onDragLeave={(e) => handlers.handleTierAreaDragLeave(e, null)}
                     onDrop={(e) => handlers.handleItemDrop(e, null, null)}
                     className={`relative p-4 min-h-[150px] flex flex-col w-full flex-grow ${theme.containerBg} ${theme.borderColor}
-                        ${draggedOverTierAreaId === null && draggedItemId ? 'drag-over-tier-area' : ''}`}
+                            ${draggedOverTierAreaId === null && draggedItemId ? 'drag-over-tier-area' : ''}`}
                     aria-label="Item Pool area"
                 >
                     <div className={`text-xl font-semibold ${theme.text} mb-3 flex items-center justify-center gap-2`}>
@@ -275,6 +239,68 @@
                         {unassignedItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} selectedItemId={selectedItemId} />)}
                     </div>
                     <button onClick={handlers.handleResetAllItemsToPool} className={`absolute bottom-4 right-4 w-12 h-12 rounded-full shadow-lg flex items-center justify-center ${theme.darkMode ? 'bg-red-700 hover:bg-red-800' : 'bg-red-500 hover:bg-red-600'} ${theme.buttonText}`} aria-label="Reset all items to pool"><RotateCcwIcon size={24}/></button>
+                </div>
+            );
+        };
+
+        const CommandsPopover = ({ theme, onClose }) => {
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    if (e.key === 'Escape') {
+                        onClose();
+                    }
+                };
+                document.addEventListener('keydown', handleKeyDown);
+                return () => document.removeEventListener('keydown', handleKeyDown);
+            }, [onClose]);
+
+            const commands = [
+                { keys: ['/', '?'], desc: 'Toggle this help menu' },
+                { keys: ['Space', 'Enter'], desc: 'Select / Deselect an item or tier' },
+                { keys: ['Esc'], desc: 'Deselect current item or tier' },
+                { keys: ['W', '↑'], desc: 'Navigate up / Move item up a tier / Move tier up' },
+                { keys: ['A', '←'], desc: 'Navigate left / Move item left within tier' },
+                { keys: ['S', '↓'], desc: 'Navigate down / Move item down a tier / Move tier down' },
+                { keys: ['D', '→'], desc: 'Navigate right / Move item right within tier' },
+                { keys: ['N', 'E'], desc: 'Select next item in the Item Pool' },
+                { keys: ['F'], desc: 'Toggle fullscreen mode' },
+            ];
+
+            return (
+                <div
+                    className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50"
+                    onClick={onClose}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="commands-title"
+                >
+                    <div
+                        className={`relative w-full max-w-lg p-6 rounded-lg shadow-xl border ${theme.containerBg} ${theme.borderColor}`}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button
+                            onClick={onClose}
+                            className={`absolute top-4 right-4 p-2 rounded-full ${theme.darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`}
+                            aria-label="Close keyboard commands"
+                        >
+                            <XIcon size={24} className={theme.text} />
+                        </button>
+                        <h2 id="commands-title" className={`text-2xl font-bold mb-4 ${theme.text}`}>Keyboard Commands ⌨️</h2>
+                        <div className="space-y-3">
+                            {commands.map((cmd, i) => (
+                                <div key={i} className={`flex justify-between items-center p-2 rounded ${theme.sectionBg}`}>
+                                    <span className={`font-mono text-sm ${theme.inputText}`}>
+                                        {cmd.keys.map(key => (
+                                            <kbd key={key} className={`px-2 py-1 mr-1 rounded-md border ${theme.borderColor} ${theme.darkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
+                                                {key}
+                                            </kbd>
+                                        ))}
+                                    </span>
+                                    <span className={`text-sm ${theme.text}`}>{cmd.desc}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             );
         };
@@ -440,7 +466,7 @@
                                     <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-cyan-300':'text-cyan-600'} mb-2 flex items-center gap-2`}>
                                         <DownloadIcon size={20}/> Data Management
                                     </h3>
-                                    <div className="flex gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                         <input
                                             type="file"
                                             ref={importFileRef}
@@ -458,6 +484,12 @@
                                             className={`flex-1 py-2 ${theme.darkMode?'bg-cyan-600 hover:bg-cyan-700':'bg-cyan-500 hover:bg-cyan-600'} ${theme.buttonText} rounded-sm flex items-center justify-center gap-2`}
                                         >
                                             <DownloadIcon size={20} /> Export
+                                        </button>
+                                        <button
+                                            onClick={dataHandlers.handleExportImage}
+                                            className={`flex-1 py-2 ${theme.darkMode?'bg-teal-600 hover:bg-teal-700':'bg-teal-500 hover:bg-teal-600'} ${theme.buttonText} rounded-sm flex items-center justify-center gap-2`}
+                                        >
+                                            <ImageIcon size={20} /> Export Image
                                         </button>
                                     </div>
                                 </div>
@@ -513,11 +545,11 @@
             const [tierLabelWidth, setTierLabelWidth] = useState(initialData?.tierLabelWidth || 128);
             const [deleteMode, setDeleteMode] = useState(false);
             const [isFullscreen, setIsFullscreen] = useState(false);
-            const [showCommands, setShowCommands] = useState(false);
             
             const [isResizing, setIsResizing] = useState(false);
             const [showConfiguration, setShowConfiguration] = useState(true);
             const [showLogs, setShowLogs] = useState(false);
+            const [showCommandsPopover, setShowCommandsPopover] = useState(false);
 
             const [draggedItemId, setDraggedItemId] = useState(null);
             const [draggedTierId, setDraggedTierId] = useState(null);
@@ -542,6 +574,7 @@
             const appContainerRef = useRef(null); const resizeDragStartRef = useRef({ x: 0, width: 0 });
             const importFileRef = useRef(null);
             const logDisplayRef = useRef(null);
+            const tierListRef = useRef(null); // Ref for the element to capture
             const isResizingRef = useRef(isResizing);
             useEffect(() => { isResizingRef.current = isResizing; }, [isResizing]);
 
@@ -577,6 +610,31 @@
             const generateId = useCallback(() => crypto.randomUUID(), []);
 
             // --- DATA HANDLERS ---
+            const handleExportImage = () => {
+                if (tierListRef.current) {
+                    addLog('Generating image...', 'info');
+                    html2canvas(tierListRef.current, {
+                        useCORS: true, // Important for external images
+                        allowTaint: true,
+                        backgroundColor: darkMode ? '#111827' : '#ffffff', // Use theme background
+                        scrollX: 0,
+                        scrollY: -window.scrollY
+                    }).then(canvas => {
+                        const link = document.createElement('a');
+                        const fileName = `${tierListTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.png`;
+                        link.download = fileName;
+                        link.href = canvas.toDataURL('image/png');
+                        link.click();
+                        addLog(`Image exported as ${fileName}`, 'action');
+                    }).catch(err => {
+                        addLog(`Image export failed: ${err.message}`, 'error');
+                        console.error('html2canvas error:', err);
+                    });
+                } else {
+                    addLog('Tier list element not found for capture.', 'error');
+                }
+            };
+
             const handleExportState = () => {
                 const stateToSave = { tiers, items, tierListTitle, itemPoolTitle, itemWidth, itemHeight, containerWidth, tierLabelWidth };
                 const jsonString = JSON.stringify(stateToSave, null, 2);
@@ -738,28 +796,19 @@
 
             // --- DRAG & DROP + A11Y HANDLERS ---
 
-            // Ensures that only an item OR a tier can be selected at once
-            useEffect(() => {
-                if (selectedItemId) setSelectedTierId(null);
-            }, [selectedItemId]);
-
-            useEffect(() => {
-                if (selectedTierId) setSelectedItemId(null);
-            }, [selectedTierId]);
+            useEffect(() => { if (selectedItemId) setSelectedTierId(null); }, [selectedItemId]);
+            useEffect(() => { if (selectedTierId) setSelectedItemId(null); }, [selectedTierId]);
 
             const moveItem = useCallback((itemId, targetTierId, beforeItemId = null) => {
                 setItems(prevItems => {
                     const itemToMove = prevItems.find(i => i.id === itemId);
                     if (!itemToMove) return prevItems;
-
                     const fromTierName = itemToMove.tierId ? tiers.find(t => t.id === itemToMove.tierId)?.value : itemPoolTitle;
                     const toTierName = targetTierId ? tiers.find(t => t.id === targetTierId)?.value : itemPoolTitle;
                     setAnnouncement(`Moved item from ${fromTierName} to ${toTierName}.`);
                     lastManuallySelectedId.current = itemId;
-
                     return prevItems.map(i => i.id === itemId ? { ...i, tierId: targetTierId } : i);
                 });
-
                 setTiers(prevTiers => {
                     let newTiers = prevTiers.map(t => ({ ...t, items: t.items.filter(id => id !== itemId) }));
                     if (targetTierId) {
@@ -850,16 +899,13 @@
                     addLog("No items in the pool to select.", "info");
                     return;
                 }
-
                 const currentSelectedIndex = unassignedItems.findIndex(item => item.id === selectedItemId);
                 let nextItem;
-
                 if (currentSelectedIndex !== -1 && currentSelectedIndex < unassignedItems.length - 1) {
                     nextItem = unassignedItems[currentSelectedIndex + 1];
                 } else {
                     nextItem = unassignedItems[0];
                 }
-
                 if (nextItem) {
                     handleItemClick(nextItem.id);
                     lastManuallySelectedId.current = nextItem.id;
@@ -868,69 +914,37 @@
 
             useEffect(() => {
                 const handleKeyDown = (e) => {
-                    // Toggle commands popover
-                    if (e.key === '?' || e.key === '/') {
-                        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
-                           e.preventDefault();
-                        }
-                        setShowCommands(prev => !prev);
-                        addLog(`Action: Toggled commands popover with ${e.key}`, 'action');
-                        return;
-                    }
-
-                    // Handle Escape for popover first
-                    if (e.key === 'Escape') {
-                        if (showCommands) {
-                            e.preventDefault();
-                            setShowCommands(false);
-                            addLog('Action: Closed commands popover with Escape', 'action');
-                            return;
-                        }
-                    }
-
                     const activeElement = document.activeElement;
                     if (!activeElement || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
-                    if (e.key.toLowerCase() === 'f') {
+                    if (e.key === '/' || e.key === '?') {
                         e.preventDefault();
-                        toggleFullScreen();
-                        addLog('Action: Toggled fullscreen with F key', 'action');
+                        setShowCommandsPopover(prev => !prev);
+                        addLog(showCommandsPopover ? 'Closed keyboard commands popover.' : 'Opened keyboard commands popover.', 'event');
                         return;
                     }
 
-                    if (e.key.toLowerCase() === 'n' || e.key.toLowerCase() === 'e') {
-                        e.preventDefault();
-                        handleSelectNextItem();
-                        return;
-                    }
+                    if (showCommandsPopover) return;
 
+                    if (e.key.toLowerCase() === 'f') { e.preventDefault(); toggleFullScreen(); addLog('Action: Toggled fullscreen with F key', 'action'); return; }
+                    if (e.key.toLowerCase() === 'n' || e.key.toLowerCase() === 'e') { e.preventDefault(); handleSelectNextItem(); return; }
                     if (!activeElement.id) return;
                     const [type, id] = activeElement.id.split(/-(.+)/);
                     if (!id) return;
-
                     const keyMap = { 'w': 'ArrowUp', 'a': 'ArrowLeft', 's': 'ArrowDown', 'd': 'ArrowRight' };
                     const mappedKey = keyMap[e.key.toLowerCase()] || e.key;
-
                     if (e.key === ' ' || e.key === 'Enter') {
                         e.preventDefault();
                         addLog(`Action: Toggling selection for ${activeElement.id} with ${e.key}`, 'action');
-                        if (type === 'item') handleItemClick(id);
-                        else if (type === 'tierlabel') handleTierClick(id);
+                        if (type === 'item') handleItemClick(id); else if (type === 'tierlabel') handleTierClick(id);
                         return;
                     }
-
                     if (e.key === 'Escape') {
                         e.preventDefault();
-                        if (selectedItemId) {
-                            lastManuallySelectedId.current = selectedItemId;
-                            handleItemClick(selectedItemId);
-                        } else if (selectedTierId) {
-                            lastMovedTierId.current = selectedTierId;
-                            handleTierClick(selectedTierId);
-                        }
+                        if (selectedItemId) { lastManuallySelectedId.current = selectedItemId; handleItemClick(selectedItemId); }
+                        else if (selectedTierId) { lastMovedTierId.current = selectedTierId; handleTierClick(selectedTierId); }
                         return;
                     }
-
                     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(mappedKey)) {
                         e.preventDefault();
                         if (selectedItemId) {
@@ -941,12 +955,7 @@
                             if (mappedKey === 'ArrowUp' || mappedKey === 'ArrowDown') {
                                 const tierIds = [null, ...tiers.map(t => t.id)];
                                 const currentTierIndex = tierIds.indexOf(currentTierId);
-                                let nextTierIndex;
-                                if (mappedKey === 'ArrowUp') {
-                                    nextTierIndex = currentTierIndex > 0 ? currentTierIndex - 1 : tierIds.length - 1;
-                                } else {
-                                    nextTierIndex = currentTierIndex < tierIds.length - 1 ? currentTierIndex + 1 : 0;
-                                }
+                                let nextTierIndex = mappedKey === 'ArrowUp' ? (currentTierIndex > 0 ? currentTierIndex - 1 : tierIds.length - 1) : (currentTierIndex < tierIds.length - 1 ? currentTierIndex + 1 : 0);
                                 const nextTierId = tierIds[nextTierIndex];
                                 moveItem(selectedItemId, nextTierId);
                             } else {
@@ -958,8 +967,7 @@
                                         const newIndex = mappedKey === 'ArrowLeft' ? Math.max(0, itemIndex - 1) : Math.min(newItems.length - 1, itemIndex + 1);
                                         if (newIndex !== itemIndex) {
                                             [newItems[itemIndex], newItems[newIndex]] = [newItems[newIndex], newItems[itemIndex]];
-                                            const movedDirection = mappedKey === 'ArrowLeft' ? 'left' : 'right';
-                                            setAnnouncement(`Item moved ${movedDirection}.`);
+                                            setAnnouncement(`Item moved ${mappedKey === 'ArrowLeft' ? 'left' : 'right'}.`);
                                             lastManuallySelectedId.current = selectedItemId;
                                         }
                                         return { ...tier, items: newItems };
@@ -991,157 +999,59 @@
                         }
                     }
                 };
-
                 document.addEventListener('keydown', handleKeyDown);
-                return () => {
-                    document.removeEventListener('keydown', handleKeyDown);
-                };
-            }, [selectedItemId, selectedTierId, items, tiers, moveItem, handleItemClick, handleTierClick, addLog, handleSelectNextItem, toggleFullScreen, showCommands]);
-
+                return () => document.removeEventListener('keydown', handleKeyDown);
+            }, [selectedItemId, selectedTierId, items, tiers, moveItem, handleItemClick, handleTierClick, addLog, handleSelectNextItem, toggleFullScreen, showCommandsPopover]);
 
             const { focusableGrid, focusableMap } = useMemo(() => {
-                const grid = [];
-                const map = {};
-
-                tiers.forEach((tier, rowIndex) => {
-                    const row = [`tier-label-${tier.id}`];
-                    tier.items.forEach(itemId => {
-                        row.push(`item-${itemId}`);
-                    });
-                    grid.push(row);
-                });
-
+                const grid = []; const map = {};
+                tiers.forEach((tier) => { const row = [`tier-label-${tier.id}`]; tier.items.forEach(itemId => { row.push(`item-${itemId}`); }); grid.push(row); });
                 const unassignedItems = items.filter(item => item.tierId === null);
-                if (unassignedItems.length > 0) {
-                    grid.push(unassignedItems.map(item => `item-${item.id}`));
-                }
-
-                grid.forEach((row, rowIndex) => {
-                    row.forEach((id, colIndex) => {
-                        map[id] = { row: rowIndex, col: colIndex };
-                    });
-                });
-
+                if (unassignedItems.length > 0) { grid.push(unassignedItems.map(item => `item-${item.id}`)); }
+                grid.forEach((row, rowIndex) => { row.forEach((id, colIndex) => { map[id] = { row: rowIndex, col: colIndex }; }); });
                 return { focusableGrid: grid, focusableMap: map };
             }, [tiers, items]);
 
             const handleNavigation = (key, currentId) => {
                 if (!focusableMap[currentId]) return;
-
                 const { row: currentRow, col: currentCol } = focusableMap[currentId];
-                let nextRow = currentRow;
-                let nextCol = currentCol;
-
+                let nextRow = currentRow, nextCol = currentCol;
                 switch (key) {
-                    case 'ArrowUp':
-                        nextRow = currentRow > 0 ? currentRow - 1 : focusableGrid.length - 1;
-                        break;
-                    case 'ArrowDown':
-                        nextRow = currentRow < focusableGrid.length - 1 ? currentRow + 1 : 0;
-                        break;
-                    case 'ArrowLeft':
-                        if (currentCol > 0) {
-                            nextCol = currentCol - 1;
-                        }
-                        break;
-                    case 'ArrowRight':
-                        if (currentCol < focusableGrid[currentRow].length - 1) {
-                            nextCol = currentCol + 1;
-                        }
-                        break;
-                    default:
-                        return;
+                    case 'ArrowUp': nextRow = currentRow > 0 ? currentRow - 1 : focusableGrid.length - 1; break;
+                    case 'ArrowDown': nextRow = currentRow < focusableGrid.length - 1 ? currentRow + 1 : 0; break;
+                    case 'ArrowLeft': if (currentCol > 0) nextCol = currentCol - 1; break;
+                    case 'ArrowRight': if (currentCol < focusableGrid[currentRow].length - 1) nextCol = currentCol + 1; break;
+                    default: return;
                 }
-
-                if (key === 'ArrowUp' || key === 'ArrowDown') {
-                    nextCol = Math.min(currentCol, focusableGrid[nextRow].length - 1);
-                }
-
+                if (key === 'ArrowUp' || key === 'ArrowDown') { nextCol = Math.min(currentCol, focusableGrid[nextRow].length - 1); }
                 const nextId = focusableGrid[nextRow]?.[nextCol];
-                if (nextId) {
-                    const nextElement = document.getElementById(nextId);
-                    if (nextElement) {
-                        nextElement.focus();
-                    }
-                }
+                if (nextId) { const nextElement = document.getElementById(nextId); if (nextElement) nextElement.focus(); }
             };
 
-            // Focus management for keyboard moves AND selections
             useEffect(() => {
-                if (lastManuallySelectedId.current) {
-                    const itemElement = document.getElementById(`item-${lastManuallySelectedId.current}`);
-                    if (itemElement) {
-                        itemElement.focus();
-                    }
-                    lastManuallySelectedId.current = null;
-                }
-                if (lastMovedTierId.current) {
-                    const tierElement = document.getElementById(`tier-label-${lastMovedTierId.current}`);
-                    if (tierElement) {
-                        tierElement.focus();
-                    }
-                    lastMovedTierId.current = null;
-                }
+                if (lastManuallySelectedId.current) { const el = document.getElementById(`item-${lastManuallySelectedId.current}`); if (el) el.focus(); lastManuallySelectedId.current = null; }
+                if (lastMovedTierId.current) { const el = document.getElementById(`tier-label-${lastMovedTierId.current}`); if (el) el.focus(); lastMovedTierId.current = null; }
             }, [items, tiers]);
 
-             useEffect(() => {
-                 if (selectedItemId && document.activeElement?.id !== `item-${selectedItemId}`) {
-                     const itemElement = document.getElementById(`item-${selectedItemId}`);
-                     if (itemElement) {
-                         itemElement.focus();
-                     }
-                 }
-             }, [selectedItemId]);
+             useEffect(() => { if (selectedItemId && document.activeElement?.id !== `item-${selectedItemId}`) { const el = document.getElementById(`item-${selectedItemId}`); if (el) el.focus(); } }, [selectedItemId]);
 
-
-            // --- RESIZE HANDLERS ---
-            const handleResizeMouseDown = (e) => {
-                e.preventDefault(); setIsResizing(true);
-                resizeDragStartRef.current = { x: e.clientX, width: appContainerRef.current ? appContainerRef.current.offsetWidth : containerWidth };
-            };
+            const handleResizeMouseDown = (e) => { e.preventDefault(); setIsResizing(true); resizeDragStartRef.current = { x: e.clientX, width: appContainerRef.current ? appContainerRef.current.offsetWidth : containerWidth }; };
             const mouseMoveHandlerRef = useRef(); const mouseUpHandlerRef = useRef();
             useEffect(() => {
-                mouseMoveHandlerRef.current = (e) => {
-                    if (!isResizingRef.current) return;
-                    const { x: initialX, width: initialWidth } = resizeDragStartRef.current;
-                    const newWidth = Math.max(600, Math.min(initialWidth + ((e.clientX - initialX) * 2), window.innerWidth));
-                    setContainerWidth(newWidth);
-                };
+                mouseMoveHandlerRef.current = (e) => { if (!isResizingRef.current) return; const { x: initialX, width: initialWidth } = resizeDragStartRef.current; const newWidth = Math.max(600, Math.min(initialWidth + ((e.clientX - initialX) * 2), window.innerWidth)); setContainerWidth(newWidth); };
                 mouseUpHandlerRef.current = () => { if (isResizingRef.current) setIsResizing(false); };
             });
             useEffect(() => {
-                const handleMove = e => mouseMoveHandlerRef.current(e);
-                const handleUp = () => mouseUpHandlerRef.current();
-                if (isResizing) {
-                    document.addEventListener('mousemove', handleMove);
-                    document.addEventListener('mouseup', handleUp);
-                }
-                return () => {
-                    document.removeEventListener('mousemove', handleMove);
-                    document.removeEventListener('mouseup', handleUp);
-                };
+                const handleMove = e => mouseMoveHandlerRef.current(e); const handleUp = () => mouseUpHandlerRef.current();
+                if (isResizing) { document.addEventListener('mousemove', handleMove); document.addEventListener('mouseup', handleUp); }
+                return () => { document.removeEventListener('mousemove', handleMove); document.removeEventListener('mouseup', handleUp); };
             }, [isResizing]);
 
-            const theme = { 
-                darkMode, 
-                bg: darkMode ? 'bg-black' : 'bg-gray-100', 
-                text: darkMode ? 'text-gray-100' : 'text-gray-900', 
-                containerBg: darkMode ? 'bg-gray-900' : 'bg-white', 
-                itemBg: darkMode ? 'bg-gray-800' : 'bg-white',
-                inputBg: darkMode ? 'bg-gray-700' : 'bg-gray-50', 
-                inputText: darkMode ? 'text-gray-200' : 'text-gray-800', 
-                placeholderText: darkMode ? 'placeholder-gray-400' : 'placeholder-gray-500', 
-                borderColor: darkMode ? 'border-gray-700' : 'border-gray-300', 
-                buttonPrimaryBg: darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600', 
-                buttonSecondaryBg: darkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-500 hover:bg-gray-600', 
-                buttonText: 'text-white', 
-                sectionBg: darkMode ? 'bg-gray-800' : 'bg-gray-50', 
-            };
-            
+            const theme = { darkMode, bg: darkMode ? 'bg-black' : 'bg-gray-100', text: darkMode ? 'text-gray-100' : 'text-gray-900', containerBg: darkMode ? 'bg-gray-900' : 'bg-white', itemBg: darkMode ? 'bg-gray-800' : 'bg-white', inputBg: darkMode ? 'bg-gray-700' : 'bg-gray-50', inputText: darkMode ? 'text-gray-200' : 'text-gray-800', placeholderText: darkMode ? 'placeholder-gray-400' : 'placeholder-gray-500', borderColor: darkMode ? 'border-gray-700' : 'border-gray-300', buttonPrimaryBg: darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600', buttonSecondaryBg: darkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-500 hover:bg-gray-600', buttonText: 'text-white', sectionBg: darkMode ? 'bg-gray-800' : 'bg-gray-50' };
             const dragState = { draggedItemId, draggedTierId, draggedOverItemId, draggedOverTierRowId, draggedOverTierAreaId, selectedItemId, selectedTierId };
             const itemProps = { itemWidth, itemHeight, tierLabelWidth };
             const itemSetters = { setItemWidth, setItemHeight, setTierLabelWidth };
-            const allHandlers = { handleItemDragStart, handleItemDragEnter, handleItemDragOver, handleItemDragLeave, handleItemDrop, handleTierAreaDragEnter, handleTierAreaDragOver, handleTierAreaDragLeave, handleTierLabelDragStart, handleTierRowDragOver, handleTierRowDragLeave, handleTierDrop, handleDeleteItem, handleDeleteTier, startEditingTier, cleanupDragStates, addLog, handleAddTier, handleAddItem, handlePasteItems, handleResetAllItemsToPool, handleSaveEditedTier, cancelEditingTier, handleExportState, handleImportState, handleItemImageUpload, handleItemClick, handleTierClick };
+            const allHandlers = { handleItemDragStart, handleItemDragEnter, handleItemDragOver, handleItemDragLeave, handleItemDrop, handleTierAreaDragEnter, handleTierAreaDragOver, handleTierAreaDragLeave, handleTierLabelDragStart, handleTierRowDragOver, handleTierRowDragLeave, handleTierDrop, handleDeleteItem, handleDeleteTier, startEditingTier, cleanupDragStates, addLog, handleAddTier, handleAddItem, handlePasteItems, handleResetAllItemsToPool, handleSaveEditedTier, cancelEditingTier, handleExportState, handleImportState, handleItemImageUpload, handleExportImage, handleItemClick, handleTierClick };
             const uiState = { showConfiguration, editingTierId, showLogs };
             const uiSetters = { setShowConfiguration, setShowLogs };
             const data = { logs, standardColors };
@@ -1151,63 +1061,34 @@
 
             return (
                 <div className={`min-h-screen font-sans p-0 transition-colors duration-300 ${theme.bg} ${theme.text}`}>
-                    {showCommands && <CommandsPopover onClose={() => setShowCommands(false)} theme={theme} />}
-                    <div
-                        aria-live="assertive"
-                        style={{
-                            position: 'absolute', width: '1px', height: '1px',
-                            padding: '0', margin: '-1px', overflow: 'hidden',
-                            clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: '0',
-                        }}
-                    >
-                        {announcement}
-                    </div>
+                    {showCommandsPopover && <CommandsPopover theme={theme} onClose={() => setShowCommandsPopover(false)} />}
+                    <div aria-live="assertive" style={{ position: 'absolute', width: '1px', height: '1px', padding: '0', margin: '-1px', overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: '0' }}>{announcement}</div>
                     <div ref={appContainerRef} className="relative mx-auto flex flex-col min-h-screen max-w-full" style={{ width: `${containerWidth}px` }}>
-                        <div className={`relative flex justify-center items-center p-4 ${theme.containerBg}`}>
-                            <input type="text" value={tierListTitle} onChange={(e) => setTierListTitle(e.target.value)} className={`text-3xl sm:text-4xl font-extrabold bg-transparent border-none focus:outline-none focus:ring-0 text-center w-full ${theme.text}`} aria-label="Tier list title"/>
-                             <button onClick={() => setShowCommands(true)} className={`absolute right-4 p-2 rounded-full ${theme.darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`} aria-label="Show keyboard commands">
-                                <HelpCircleIcon className={`${theme.darkMode ? 'text-gray-400' : 'text-gray-600'}`} />
-                            </button>
-                        </div>
 
-                        <div className="flex flex-col gap-0 flex-grow">
+                        <button
+                            onClick={() => setShowCommandsPopover(true)}
+                            className={`absolute top-4 right-4 p-2 rounded-full z-20 ${theme.darkMode ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-500 hover:bg-gray-200 hover:text-black'}`}
+                            aria-label="Show keyboard commands"
+                        >
+                            <HelpCircleIcon size={28} />
+                        </button>
+
+                        <div ref={tierListRef}>
+                            <div className={`flex justify-center items-center p-4 ${theme.containerBg}`}>
+                                <input type="text" value={tierListTitle} onChange={(e) => setTierListTitle(e.target.value)} className={`text-3xl sm:text-4xl font-extrabold bg-transparent border-none focus:outline-none focus:ring-0 text-center w-full ${theme.text}`} aria-label="Tier list title"/>
+                            </div>
                             <div className={`${theme.containerBg} w-full`}>
                                 {tiers.map((tier, index) => (
                                     <TierRow key={tier.id} tier={tier} items={items} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} index={index} totalTiers={tiers.length} deleteMode={deleteMode} selectedTierId={selectedTierId} />
                                 ))}
                             </div>
-                            <ItemPool
-                                items={items}
-                                itemPoolTitle={itemPoolTitle}
-                                setItemPoolTitle={setItemPoolTitle}
-                                theme={theme}
-                                dragState={dragState}
-                                handlers={allHandlers}
-                                itemProps={itemProps}
-                                deleteMode={deleteMode}
-                            />
                         </div>
 
-                        <ConfigurationPanel
-                            theme={theme} 
-                            uiState={uiState} 
-                            uiSetters={uiSetters} 
-                            data={data}
-                            dataHandlers={allHandlers} 
-                            editState={editState} 
-                            editSetters={editSetters} 
-                            refs={refs}
-                            itemProps={itemProps}
-                            itemSetters={itemSetters}
-                            deleteMode={deleteMode}
-                            setDeleteMode={setDeleteMode}
-                            setContainerWidth={setContainerWidth}
-                            toggleFullScreen={toggleFullScreen}
-                            setDarkMode={setDarkMode}
-                            isFullscreen={isFullscreen}
-                            darkMode={darkMode}
-                        />
+                        <div className="flex flex-col gap-0 flex-grow">
+                            <ItemPool items={items} itemPoolTitle={itemPoolTitle} setItemPoolTitle={setItemPoolTitle} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} deleteMode={deleteMode} />
+                        </div>
 
+                        <ConfigurationPanel theme={theme} uiState={uiState} uiSetters={uiSetters} data={data} dataHandlers={allHandlers} editState={editState} editSetters={editSetters} refs={refs} itemProps={itemProps} itemSetters={itemSetters} deleteMode={deleteMode} setDeleteMode={setDeleteMode} setContainerWidth={setContainerWidth} toggleFullScreen={toggleFullScreen} setDarkMode={setDarkMode} isFullscreen={isFullscreen} darkMode={darkMode} />
                         <div className="resize-handle" onMouseDown={handleResizeMouseDown}><div className="resize-handle-visual"></div></div>
                     </div>
                 </div>
