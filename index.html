@@ -262,8 +262,7 @@
                 { keys: ['A', '←'], desc: 'Navigate left / Move item left within tier' },
                 { keys: ['S', '↓'], desc: 'Navigate down / Move item down a tier / Move tier down' },
                 { keys: ['D', '→'], desc: 'Navigate right / Move item right within tier' },
-                { keys: ['N', 'E'], desc: 'Select next item on screen' },
-                { keys: ['P', 'C'], desc: 'Select previous item on screen' },
+                { keys: ['N', 'E'], desc: 'Select next item in Item Pool' },
                 { keys: ['F'], desc: 'Toggle fullscreen mode' },
             ];
 
@@ -894,41 +893,24 @@
                 });
             }, [tiers, addLog]);
 
-            const allItemsOrdered = useMemo(() => {
-                const ordered = [];
-                tiers.forEach(tier => {
-                    tier.items.forEach(itemId => {
-                        ordered.push(itemId);
-                    });
-                });
-                const unassigned = items.filter(item => item.tierId === null).map(item => item.id);
-                return [...ordered, ...unassigned];
-            }, [tiers, items]);
-
-            const selectAdjacentItem = useCallback((direction) => {
-                if (allItemsOrdered.length === 0) {
-                    addLog("No items to select.", "info");
+            const handleSelectNextItemInPool = useCallback(() => {
+                const unassignedItems = items.filter(item => item.tierId === null);
+                if (unassignedItems.length === 0) {
+                    addLog("No items in the pool to select.", "info");
                     return;
                 }
-                const currentSelectedIndex = selectedItemId ? allItemsOrdered.indexOf(selectedItemId) : -1;
-                let nextIndex;
-
-                if (currentSelectedIndex === -1) {
-                    nextIndex = direction === 'next' ? 0 : allItemsOrdered.length - 1;
+                const currentSelectedIndexInPool = unassignedItems.findIndex(item => item.id === selectedItemId);
+                let nextItem;
+                if (currentSelectedIndexInPool !== -1 && currentSelectedIndexInPool < unassignedItems.length - 1) {
+                    nextItem = unassignedItems[currentSelectedIndexInPool + 1];
                 } else {
-                    if (direction === 'next') {
-                        nextIndex = currentSelectedIndex < allItemsOrdered.length - 1 ? currentSelectedIndex + 1 : 0;
-                    } else { // 'previous'
-                        nextIndex = currentSelectedIndex > 0 ? currentSelectedIndex - 1 : allItemsOrdered.length - 1;
-                    }
+                    nextItem = unassignedItems[0];
                 }
-
-                const nextItemId = allItemsOrdered[nextIndex];
-                if (nextItemId) {
-                    setSelectedItemId(nextItemId);
-                    lastManuallySelectedId.current = nextItemId;
+                if (nextItem) {
+                    handleItemClick(nextItem.id);
+                    lastManuallySelectedId.current = nextItem.id;
                 }
-            }, [allItemsOrdered, selectedItemId, addLog]);
+            }, [items, selectedItemId, handleItemClick, addLog]);
 
 
             useEffect(() => {
@@ -949,12 +931,7 @@
 
                     if (['n', 'e'].includes(e.key.toLowerCase())) {
                         e.preventDefault();
-                        selectAdjacentItem('next');
-                        return;
-                    }
-                    if (['p', 'c'].includes(e.key.toLowerCase())) {
-                        e.preventDefault();
-                        selectAdjacentItem('previous');
+                        handleSelectNextItemInPool();
                         return;
                     }
 
@@ -1031,7 +1008,7 @@
                 };
                 document.addEventListener('keydown', handleKeyDown);
                 return () => document.removeEventListener('keydown', handleKeyDown);
-            }, [selectedItemId, selectedTierId, items, tiers, moveItem, handleItemClick, handleTierClick, addLog, selectAdjacentItem, toggleFullScreen, showCommandsPopover]);
+            }, [selectedItemId, selectedTierId, items, tiers, moveItem, handleItemClick, handleTierClick, addLog, handleSelectNextItemInPool, toggleFullScreen, showCommandsPopover]);
 
             const { focusableGrid, focusableMap } = useMemo(() => {
                 const grid = []; const map = {};
