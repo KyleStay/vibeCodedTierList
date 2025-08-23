@@ -118,14 +118,14 @@
 
         // --- UI COMPONENTS ---
 
-        const DraggableItem = memo(({ item, itemWidth, itemHeight, theme, draggedItemId, draggedOverItemId, handlers, addLog, deleteMode, finalizeMode, selectedItemId }) => (
+        const DraggableItem = memo(({ item, itemWidth, itemHeight, theme, draggedItemId, draggedOverItemId, handlers, addLog, deleteMode, selectedItemId }) => (
             <div
                 id={`item-${item.id}`}
-                tabIndex={finalizeMode ? -1 : 0}
+                tabIndex={0}
                 role="button"
                 aria-pressed={selectedItemId === item.id}
                 aria-label={`Item: ${item.value || 'image'}. ${item.tierId ? `In tier ${item.tierId}` : 'In item pool'}. Press Space or Enter to select.`}
-                draggable={!finalizeMode}
+                draggable={true}
                 onClick={() => handlers.handleItemClick(item.id)}
                 onKeyDown={(e) => handlers.handleItemKeyDown(e, item.id)}
                 onDragStart={(e) => handlers.handleItemDragStart(e, item.id)}
@@ -150,17 +150,17 @@
                         <span className={`text-sm font-medium ${theme.inputText} text-center p-1 break-all pointer-events-none`}>{item.value}</span>
                     )}
                 </div>
-                {!finalizeMode && <button 
+                <button
                     onClick={(e) => { e.stopPropagation(); handlers.handleDeleteItem(item.id); }}
                     className={`absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 z-20 transition-opacity ${deleteMode ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                     aria-label={`Delete item ${item.value}`}
                 >
                     <Trash2Icon size={14} />
-                </button>}
+                </button>
             </div>
         ));
 
-        const TierRow = ({ tier, items, theme, dragState, handlers, itemProps, index, deleteMode, finalizeMode, selectedTierId }) => {
+        const TierRow = ({ tier, items, theme, dragState, handlers, itemProps, index, deleteMode, selectedTierId }) => {
             const { draggedTierId, draggedOverTierRowId, draggedOverTierAreaId, draggedItemId, draggedOverItemId, selectedItemId } = dragState;
             const tierItems = tier.items.map(itemId => items.find(i => i.id === itemId)).filter(Boolean);
 
@@ -175,23 +175,23 @@
                 >
                     <div
                         id={`tier-label-${tier.id}`}
-                        tabIndex={finalizeMode ? -1 : 0}
+                        tabIndex={0}
                         role="button"
                         aria-pressed={selectedTierId === tier.id}
                         aria-label={`Tier: ${tier.value}. Press Space or Enter to select.`}
                         onClick={() => handlers.handleTierClick(tier.id)}
                         onKeyDown={(e) => handlers.handleTierKeyDown(e, tier.id)}
-                        draggable={!finalizeMode}
+                        draggable={true}
                         onDragStart={(e) => handlers.handleTierLabelDragStart(e, tier.id)}
                         onDragEnd={handlers.cleanupDragStates}
-                        className={`relative flex-shrink-0 p-3 flex items-center justify-center text-center font-bold text-lg text-black group ${!finalizeMode ? 'tier-label-draggable' : ''} ${draggedTierId === tier.id ? 'tier-label-dragging' : ''} ${selectedTierId === tier.id ? 'keyboard-selected' : ''}`}
+                        className={`relative flex-shrink-0 p-3 flex items-center justify-center text-center font-bold text-lg text-black group tier-label-draggable ${draggedTierId === tier.id ? 'tier-label-dragging' : ''} ${selectedTierId === tier.id ? 'keyboard-selected' : ''}`}
                         style={{ backgroundColor: tier.color, width: `${itemProps.tierLabelWidth}px` }}
                     >
                         {tier.type === 'image' ? <img src={tier.value} alt="Tier" className="w-full h-auto max-h-full object-contain pointer-events-none" /> : <span className="pointer-events-none">{tier.value}</span>}
-                        {!finalizeMode && <>
+                        <>
                             <button onClick={(e) => { e.stopPropagation(); handlers.handleDeleteTier(tier.id); }} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 z-10" aria-label={`Delete tier ${tier.value}`}> <Trash2Icon size={14} /> </button>
                             <button onClick={(e) => { e.stopPropagation(); handlers.startEditingTier(tier); }} className="absolute top-1 left-1 bg-gray-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 z-10" aria-label={`Edit tier ${tier.value}`}> <PencilIcon size={14} /> </button>
-                        </>}
+                        </>
                     </div>
                     <div
                         onDragEnter={(e) => handlers.handleTierAreaDragEnter(e, tier.id)}
@@ -202,13 +202,13 @@
                             ${draggedOverTierAreaId === tier.id && draggedItemId && !draggedOverItemId ? 'drag-over-tier-area' : ''}`}
                         aria-label={`Tier ${tier.value} content area`}
                     >
-                        {tierItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} finalizeMode={finalizeMode} selectedItemId={selectedItemId} />)}
+                        {tierItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} selectedItemId={selectedItemId} />)}
                     </div>
                 </div>
             );
         };
 
-        const ItemPool = ({ items, itemPoolTitle, setItemPoolTitle, theme, dragState, handlers, itemProps, deleteMode, finalizeMode }) => {
+        const ItemPool = ({ items, itemPoolTitle, setItemPoolTitle, theme, dragState, handlers, itemProps, deleteMode }) => {
             const { draggedOverTierAreaId, draggedItemId, draggedOverItemId, selectedItemId } = dragState;
             const unassignedItems = items.filter(item => item.tierId === null);
 
@@ -229,13 +229,12 @@
                             onChange={(e) => setItemPoolTitle(e.target.value)}
                             className={`bg-transparent border-none focus:outline-none focus:ring-0 text-center p-0 font-semibold ${theme.text}`}
                             aria-label="Item pool title"
-                            disabled={finalizeMode}
                         />
                     </div>
                     <div className="flex flex-wrap gap-2 justify-center sm:justify-start flex-grow min-h-[100px]">
-                        {unassignedItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} finalizeMode={finalizeMode} selectedItemId={selectedItemId} />)}
+                        {unassignedItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} selectedItemId={selectedItemId} />)}
                     </div>
-                    {!finalizeMode && <button onClick={handlers.handleResetAllItemsToPool} className={`absolute bottom-4 right-4 w-12 h-12 rounded-full shadow-lg flex items-center justify-center ${theme.darkMode ? 'bg-red-700 hover:bg-red-800' : 'bg-red-500 hover:bg-red-600'} ${theme.buttonText}`} aria-label="Reset all items to pool"><RotateCcwIcon size={24}/></button>}
+                    <button onClick={handlers.handleResetAllItemsToPool} className={`absolute bottom-4 right-4 w-12 h-12 rounded-full shadow-lg flex items-center justify-center ${theme.darkMode ? 'bg-red-700 hover:bg-red-800' : 'bg-red-500 hover:bg-red-600'} ${theme.buttonText}`} aria-label="Reset all items to pool"><RotateCcwIcon size={24}/></button>
                 </div>
             );
         };
@@ -459,7 +458,6 @@
             const [tierLabelWidth, setTierLabelWidth] = useState(initialData?.tierLabelWidth || 128);
             const [deleteMode, setDeleteMode] = useState(false);
             const [isFullscreen, setIsFullscreen] = useState(false);
-            const [finalizeMode, setFinalizeMode] = useState(false);
             
             const [isResizing, setIsResizing] = useState(false);
             const [showConfiguration, setShowConfiguration] = useState(true);
@@ -777,7 +775,6 @@
             };
 
             const handleItemClick = useCallback((itemId) => {
-                if (finalizeMode) return;
                 if (selectedItemId === itemId) {
                     setSelectedItemId(null);
                     setSelectedItemOriginTierId(null);
@@ -789,10 +786,9 @@
                     setSelectedTierId(null);
                     setAnnouncement(`Item ${item.value || 'image'} selected. Use arrow keys to move, or Escape to deselect.`);
                 }
-            }, [selectedItemId, items, finalizeMode]);
+            }, [selectedItemId, items]);
 
             const handleTierClick = useCallback((tierId) => {
-                if (finalizeMode) return;
                 if (selectedTierId === tierId) {
                     setSelectedTierId(null);
                     setAnnouncement(`Tier deselected.`);
@@ -802,7 +798,7 @@
                     const tier = tiers.find(t => t.id === tierId);
                     setAnnouncement(`Tier ${tier.value} selected. Use arrow keys to reorder, or Escape to deselect.`);
                 }
-            }, [selectedTierId, tiers, finalizeMode]);
+            }, [selectedTierId, tiers]);
 
             const handleItemKeyDown = useCallback((e, itemId) => {
                 const item = items.find(i => i.id === itemId);
@@ -1010,27 +1006,22 @@
                         <div className={`flex justify-between items-center p-4 ${theme.containerBg}`}>
                             <input type="text" value={tierListTitle} onChange={(e) => setTierListTitle(e.target.value)} className={`text-3xl sm:text-4xl font-extrabold bg-transparent border-none focus:outline-none focus:ring-0 text-left w-full mr-4 ${theme.text}`} aria-label="Tier list title"/>
                             <div className="flex items-center gap-2 flex-shrink-0">
-                                <button onClick={() => setFinalizeMode(!finalizeMode)} className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`}>
-                                    {finalizeMode ? 'Edit' : 'Finalize'}
+                                <button onClick={() => setContainerWidth(window.innerWidth)} className={`w-10 h-10 flex items-center justify-center rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`} aria-label="Fit to screen width">
+                                    Fit
                                 </button>
-                                {!finalizeMode && <>
-                                    <button onClick={() => setContainerWidth(window.innerWidth)} className={`w-10 h-10 flex items-center justify-center rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`} aria-label="Fit to screen width">
-                                        Fit
-                                    </button>
-                                    <button onClick={toggleFullScreen} className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`} aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}>
-                                        {isFullscreen ? <MinimizeIcon size={24} /> : <MaximizeIcon size={24} />}
-                                    </button>
-                                    <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`} aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}>
-                                        {darkMode ? <SunIcon size={24} /> : <MoonIcon size={24} />}
-                                    </button>
-                                </>}
+                                <button onClick={toggleFullScreen} className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`} aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}>
+                                    {isFullscreen ? <MinimizeIcon size={24} /> : <MaximizeIcon size={24} />}
+                                </button>
+                                <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`} aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}>
+                                    {darkMode ? <SunIcon size={24} /> : <MoonIcon size={24} />}
+                                </button>
                             </div>
                         </div>
 
                         <div className="flex flex-col gap-0 flex-grow">
                             <div className={`${theme.containerBg} w-full`}>
                                 {tiers.map((tier, index) => (
-                                    <TierRow key={tier.id} tier={tier} items={items} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} index={index} deleteMode={deleteMode} finalizeMode={finalizeMode} selectedTierId={selectedTierId} />
+                                    <TierRow key={tier.id} tier={tier} items={items} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} index={index} deleteMode={deleteMode} selectedTierId={selectedTierId} />
                                 ))}
                             </div>
                             <ItemPool
@@ -1042,11 +1033,10 @@
                                 handlers={allHandlers}
                                 itemProps={itemProps}
                                 deleteMode={deleteMode}
-                                finalizeMode={finalizeMode}
                             />
                         </div>
                         
-                        {!finalizeMode && <ConfigurationPanel 
+                        <ConfigurationPanel
                             theme={theme} 
                             uiState={uiState} 
                             uiSetters={uiSetters} 
@@ -1061,7 +1051,7 @@
                             setDeleteMode={setDeleteMode}
                             autoSelectNext={autoSelectNext}
                             setAutoSelectNext={setAutoSelectNext}
-                        />}
+                        />
 
                         <div className="resize-handle" onMouseDown={handleResizeMouseDown}><div className="resize-handle-visual"></div></div>
                     </div>
