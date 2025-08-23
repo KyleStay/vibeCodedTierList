@@ -55,7 +55,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useRef, useEffect, useCallback, memo } = React;
+        const { useState, useRef, useEffect, useCallback, useMemo, memo } = React;
 
         // --- ICONS ---
         const PlusCircleIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>;
@@ -127,7 +127,6 @@
                 aria-label={`Item: ${item.value || 'image'}. ${item.tierId ? `In tier ${item.tierId}` : 'In item pool'}. Press Space or Enter to select.`}
                 draggable={true}
                 onClick={() => handlers.handleItemClick(item.id)}
-                onKeyDown={(e) => handlers.handleItemKeyDown(e, item.id)}
                 onDragStart={(e) => handlers.handleItemDragStart(e, item.id)}
                 onDragEnter={(e) => handlers.handleItemDragEnter(e, item.id, item.tierId)}
                 onDragOver={(e) => handlers.handleItemDragOver(e, item.id, item.tierId)}
@@ -181,7 +180,6 @@
                         aria-pressed={selectedTierId === tier.id}
                         aria-label={`Tier: ${tier.value}. Press Space or Enter to select.`}
                         onClick={() => handlers.handleTierClick(tier.id)}
-                        onKeyDown={(e) => handlers.handleTierKeyDown(e, tier.id)}
                         draggable={true}
                         onDragStart={(e) => handlers.handleTierLabelDragStart(e, tier.id)}
                         onDragEnd={handlers.cleanupDragStates}
@@ -240,14 +238,14 @@
             );
         };
 
-        const ConfigurationPanel = ({ theme, uiState, uiSetters, data, dataHandlers, editState, editSetters, refs, itemProps, itemSetters, deleteMode, setDeleteMode, autoSelectNext, setAutoSelectNext, setContainerWidth, toggleFullScreen, setDarkMode, isFullscreen, darkMode }) => {
+        const ConfigurationPanel = ({ theme, uiState, uiSetters, data, dataHandlers, editState, editSetters, refs, itemProps, itemSetters, deleteMode, setDeleteMode, setContainerWidth, toggleFullScreen, setDarkMode, isFullscreen, darkMode }) => {
             const { showConfiguration, editingTierId, showLogs } = uiState;
             const { setShowConfiguration, setShowLogs } = uiSetters;
             const { logs, standardColors } = data;
             const { handleAddTier, handleAddItem, handlePasteItems, handleSaveEditedTier, cancelEditingTier, addLog } = dataHandlers;
             const { editingTierLabel, editingTierColor, newTierColor } = editState;
             const { setEditingTierLabel, setEditingTierColor, setNewTierColor } = editSetters;
-            const { newTierNameRef, newItemNameRef, newItemImageFileRef, newItemImageUrlRef, pasteItemsRef, importFileRef } = refs;
+            const { newTierNameRef, newItemNameRef, newItemImageFileRef, newItemImageUrlRef, pasteItemsRef, importFileRef, logDisplayRef } = refs;
             const { itemWidth, itemHeight, tierLabelWidth } = itemProps;
             const { setItemWidth, setItemHeight, setTierLabelWidth } = itemSetters;
 
@@ -291,6 +289,16 @@
                 else addLog("No logs to copy.", "info");
             };
 
+            const selectAllLogs = () => {
+                if (logDisplayRef.current) {
+                    const range = document.createRange();
+                    range.selectNodeContents(logDisplayRef.current);
+                    const selection = window.getSelection();
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                }
+            };
+
             return (
                 <div className={`${theme.containerBg} p-4 w-full ${theme.borderColor} border-t`}>
                     <h2 className={`text-2xl font-bold ${theme.text} mb-4 text-center flex items-center justify-center gap-2`}>
@@ -316,7 +324,7 @@
                                             <label htmlFor="itemHeight" className={`block text-sm font-medium ${theme.inputText}`}>Item Height (px)</label>
                                             <input type="number" id="itemHeight" value={localHeight} onChange={e => setLocalHeight(e.target.value)} onKeyDown={handleKeyDown} className={`mt-1 p-2 w-full border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
                                         </div>
-                                        <div className="sm:col-span-2 lg:col-span-3 mt-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                        <div className="sm:col-span-2 lg:col-span-3 mt-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <button onClick={handleSizeUpdate} className={`w-full py-2 rounded-sm shadow-sm ${theme.buttonSecondaryBg} ${theme.buttonText}`}>Update Sizes</button>
                                             <div className="flex justify-center items-center">
                                                 <label htmlFor="deleteModeToggle" className={`text-sm font-medium ${theme.inputText} mr-3`}>Delete Mode</label>
@@ -325,16 +333,9 @@
                                                     <label htmlFor="deleteModeToggle" className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
                                                 </div>
                                             </div>
-                                            <div className="flex justify-center items-center">
-                                                <label htmlFor="autoSelectToggle" className={`text-sm font-medium ${theme.inputText} mr-3`}>Auto-select Next</label>
-                                                <div className="relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
-                                                    <input type="checkbox" name="toggle" id="autoSelectToggle" checked={autoSelectNext} onChange={() => setAutoSelectNext(!autoSelectNext)} className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
-                                                    <label htmlFor="autoSelectToggle" className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
-                                                </div>
-                                            </div>
                                         </div>
                                     </div>
-                                     <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 grid grid-cols-1 sm:grid-cols-3 gap-4">
                                         <button onClick={() => setContainerWidth(window.innerWidth)} className={`w-full py-2 rounded-sm shadow-sm ${theme.buttonSecondaryBg} ${theme.buttonText} flex items-center justify-center gap-2`}>
                                             Fit to Screen
                                         </button>
@@ -372,7 +373,7 @@
                                         <button onClick={handleAddTier} className={`w-full py-2 ${theme.buttonPrimaryBg} ${theme.buttonText} rounded-sm`}>Add Tier</button>
                                     </div>
                                 )}
-                               {/* Add Item */}
+                                {/* Add Item */}
                                 <div className={`${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor}`}>
                                     <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-green-300':'text-green-600'} mb-3 flex items-center gap-2`}> <PlusCircleIcon size={20}/> Add Item</h3>
                                     <div className="flex flex-col gap-3">
@@ -427,8 +428,11 @@
                                     <button onClick={()=>setShowLogs(!showLogs)} className={`p-1 rounded-full ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`} aria-expanded={showLogs}>{showLogs?<ChevronUpIcon size={18}/>:<ChevronDownIcon size={18}/>}</button>
                                 </h3>
                                 {showLogs && (<>
-                                    <div className="flex gap-2 mb-3"> <button onClick={copyLogsToClipboard} className={`flex-1 py-1.5 px-3 rounded-sm ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>Copy</button> </div>
-                                    <div className={`log-display-area flex flex-col gap-1 ${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor} max-h-60 overflow-y-auto text-left`}>
+                                    <div className="flex gap-2 mb-3">
+                                        <button onClick={copyLogsToClipboard} className={`flex-1 py-1.5 px-3 rounded-sm ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>Copy</button>
+                                        <button onClick={selectAllLogs} className={`flex-1 py-1.5 px-3 rounded-sm ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>Select</button>
+                                    </div>
+                                    <div ref={logDisplayRef} className={`log-display-area flex flex-col gap-1 ${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor} max-h-60 overflow-y-auto text-left`}>
                                         {logs.length === 0 ? <p className={`${theme.darkMode?'text-gray-400':'text-gray-600'} text-sm`}>No logs.</p> : logs.map((l,i)=>(
                                             <p key={i} className={`text-xs font-mono ${l.type==='error'?(theme.darkMode?'text-red-400':'text-red-600'):l.type==='warning'?(theme.darkMode?'text-yellow-400':'text-yellow-600'):l.type==='action'?(theme.darkMode?'text-blue-300':'text-blue-600'):l.type==='event'?(theme.darkMode?'text-purple-300':'text-purple-600'):(theme.darkMode?'text-gray-300':'text-gray-700')}`}>
                                                 <span className={`${theme.darkMode?'text-gray-500':'text-gray-400'}`}>{l.timestamp}</span> <span className={`font-bold ${l.type==='error'?(theme.darkMode?'text-red-500':'text-red-700'):l.type==='warning'?(theme.darkMode?'text-yellow-500':'text-yellow-700'):l.type==='action'?(theme.darkMode?'text-blue-400':'text-blue-700'):l.type==='event'?(theme.darkMode?'text-purple-400':'text-purple-700'):(theme.darkMode?'text-gray-400':'text-gray-500')}`}>[{l.type.toUpperCase()}]</span> {l.message}
@@ -482,8 +486,6 @@
             // A11y State
             const [selectedItemId, setSelectedItemId] = useState(null);
             const [selectedTierId, setSelectedTierId] = useState(null);
-            const [selectedItemOriginTierId, setSelectedItemOriginTierId] = useState(null);
-            const [autoSelectNext, setAutoSelectNext] = useState(true);
             const lastManuallySelectedId = useRef(null);
             const lastMovedTierId = useRef(null);
 
@@ -497,6 +499,7 @@
             const pasteItemsRef = useRef(null);
             const appContainerRef = useRef(null); const resizeDragStartRef = useRef({ x: 0, width: 0 });
             const importFileRef = useRef(null);
+            const logDisplayRef = useRef(null);
             const isResizingRef = useRef(isResizing);
             useEffect(() => { isResizingRef.current = isResizing; }, [isResizing]);
 
@@ -677,18 +680,30 @@
 
             // --- DRAG & DROP + A11Y HANDLERS ---
 
+            // Ensures that only an item OR a tier can be selected at once
+            useEffect(() => {
+                if (selectedItemId) setSelectedTierId(null);
+            }, [selectedItemId]);
+
+            useEffect(() => {
+                if (selectedTierId) setSelectedItemId(null);
+            }, [selectedTierId]);
+
             const moveItem = useCallback((itemId, targetTierId, beforeItemId = null) => {
-                const itemToMove = items.find(i => i.id === itemId);
-                if (!itemToMove) return;
+                setItems(prevItems => {
+                    const itemToMove = prevItems.find(i => i.id === itemId);
+                    if (!itemToMove) return prevItems;
 
-                const fromTierName = itemToMove.tierId ? tiers.find(t => t.id === itemToMove.tierId)?.value : itemPoolTitle;
-                const toTierName = targetTierId ? tiers.find(t => t.id === targetTierId)?.value : itemPoolTitle;
-                setAnnouncement(`Moved item from ${fromTierName} to ${toTierName}.`);
-                lastManuallySelectedId.current = itemId;
+                    const fromTierName = itemToMove.tierId ? tiers.find(t => t.id === itemToMove.tierId)?.value : itemPoolTitle;
+                    const toTierName = targetTierId ? tiers.find(t => t.id === targetTierId)?.value : itemPoolTitle;
+                    setAnnouncement(`Moved item from ${fromTierName} to ${toTierName}.`);
+                    lastManuallySelectedId.current = itemId;
 
-                setItems(prev => prev.map(i => i.id === itemId ? { ...i, tierId: targetTierId } : i));
-                setTiers(prev => {
-                    let newTiers = prev.map(t => ({ ...t, items: t.items.filter(id => id !== itemId) }));
+                    return prevItems.map(i => i.id === itemId ? { ...i, tierId: targetTierId } : i);
+                });
+
+                setTiers(prevTiers => {
+                    let newTiers = prevTiers.map(t => ({ ...t, items: t.items.filter(id => id !== itemId) }));
                     if (targetTierId) {
                         newTiers = newTiers.map(t => {
                             if (t.id === targetTierId) {
@@ -700,7 +715,7 @@
                         });
                     } return newTiers;
                 });
-            }, [items, tiers, itemPoolTitle]);
+            }, [tiers, itemPoolTitle]);
 
             const cleanupDragStates = () => { setDraggedItemId(null); setDraggedTierId(null); setDraggedOverItemId(null); setDraggedOverTierRowId(null); setDraggedOverTierAreaId(null); };
             const handleItemDragStart = (e, itemId) => { setDraggedItemId(itemId); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', itemId); };
@@ -711,7 +726,7 @@
             const handleTierAreaDragOver = (e, tierIdContext) => { e.preventDefault(); e.stopPropagation(); if (draggedItemId) { e.dataTransfer.dropEffect = 'move'; setDraggedOverTierAreaId(tierIdContext); setDraggedOverItemId(null); } };
             const handleTierAreaDragLeave = (e, tierIdContext) => { e.stopPropagation(); if (!e.currentTarget.contains(e.relatedTarget) && draggedItemId) { setDraggedOverTierAreaId(null); } };
             const handleTierLabelDragStart = (e, tierId) => { setDraggedTierId(tierId); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', tierId); };
-            const handleTierRowDragOver = (e, targetTierId) => { e.preventDefault(); if (draggedTierId && draggedTierId !== targetTierId) { e.dataTransfer.dropEffect = 'move'; setDraggedOverTierRowId(targetTierId); } else if (draggedItemId) { e.dataTransfer.dropEffect = 'move'; } };
+            const handleTierRowDragOver = (e, targetTierId) => { e.preventDefault(); if (draggedItemId) { e.dataTransfer.dropEffect = 'move'; } else if (draggedTierId && draggedTierId !== targetTierId) { e.dataTransfer.dropEffect = 'move'; setDraggedOverTierRowId(targetTierId); } };
             const handleTierRowDragLeave = (e, tierId) => { if (!e.currentTarget.contains(e.relatedTarget) && draggedTierId) { setDraggedOverTierRowId(null); } };
             
             const handleItemDrop = (e, targetTierId, beforeItemId = null) => {
@@ -737,137 +752,202 @@
             };
 
             const handleItemClick = useCallback((itemId) => {
-                if (selectedItemId === itemId) {
-                    setSelectedItemId(null);
-                    setSelectedItemOriginTierId(null);
-                    setAnnouncement(`Item deselected.`);
-                } else {
-                    const item = items.find(i => i.id === itemId);
-                    setSelectedItemId(itemId);
-                    setSelectedItemOriginTierId(item.tierId);
-                    setSelectedTierId(null);
-                    setAnnouncement(`Item ${item.value || 'image'} selected. Use arrow keys to move, or Escape to deselect.`);
-                }
-            }, [selectedItemId, items]);
+                setSelectedItemId(prevSelectedId => {
+                    if (prevSelectedId === itemId) {
+                        addLog(`Item deselected. Entering Navigation Mode.`, 'event');
+                        return null;
+                    } else {
+                        const item = items.find(i => i.id === itemId);
+                        if (item) {
+                            addLog(`Item selected. Entering Move Mode.`, 'event');
+                            setAnnouncement(`Item ${item.value || 'image'} selected. Use arrow keys to move, or Escape to deselect.`);
+                            return itemId;
+                        }
+                        return prevSelectedId;
+                    }
+                });
+            }, [items, addLog]);
 
             const handleTierClick = useCallback((tierId) => {
-                if (selectedTierId === tierId) {
-                    setSelectedTierId(null);
-                    setAnnouncement(`Tier deselected.`);
-                } else {
-                    setSelectedTierId(tierId);
-                    setSelectedItemId(null);
-                    const tier = tiers.find(t => t.id === tierId);
-                    setAnnouncement(`Tier ${tier.value} selected. Use arrow keys to reorder, or Escape to deselect.`);
-                }
-            }, [selectedTierId, tiers]);
+                setSelectedTierId(prevSelectedId => {
+                    if (prevSelectedId === tierId) {
+                        addLog(`Tier deselected. Entering Navigation Mode.`, 'event');
+                        setAnnouncement(`Tier deselected.`);
+                        return null;
+                    } else {
+                        const tier = tiers.find(t => t.id === tierId);
+                        if (tier) {
+                            addLog(`Tier selected. Entering Move Mode.`, 'event');
+                            setAnnouncement(`Tier ${tier.value} selected. Use arrow keys to reorder, or Escape to deselect.`);
+                            return tierId;
+                        }
+                        return prevSelectedId;
+                    }
+                });
+            }, [tiers, addLog]);
 
-            const handleItemKeyDown = useCallback((e, itemId) => {
-                const item = items.find(i => i.id === itemId);
-                if (!item) return;
-                const currentTierId = item.tierId;
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    const activeElement = document.activeElement;
+                    if (!activeElement || !activeElement.id) return;
 
-                if (e.key === ' ' || e.key === 'Enter') {
-                    e.preventDefault();
-                    handleItemClick(itemId);
-                }
+                    const [type, id] = activeElement.id.split(/-(.+)/);
+                    if (!id) return;
 
-                if (e.key === 'Escape') {
-                    if (selectedItemId === itemId) {
-                        const wasFromPool = selectedItemOriginTierId === null;
-                        let nextSelectedItemId = null;
+                    if (e.key === ' ' || e.key === 'Enter') {
+                        e.preventDefault();
+                        addLog(`Action: Toggling selection for ${activeElement.id} with ${e.key}`, 'action');
+                        if (type === 'item') handleItemClick(id);
+                        else if (type === 'tierlabel') handleTierClick(id);
+                        return;
+                    }
 
-                        if (autoSelectNext && wasFromPool) {
-                            const unassignedItems = items.filter(item => item.tierId === null);
-                            const currentItemInPoolIndex = unassignedItems.findIndex(i => i.id === itemId);
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        if (selectedItemId) {
+                            lastManuallySelectedId.current = selectedItemId;
+                            handleItemClick(selectedItemId);
+                        } else if (selectedTierId) {
+                            lastMovedTierId.current = selectedTierId;
+                            handleTierClick(selectedTierId);
+                        }
+                        return;
+                    }
 
-                            if (unassignedItems.length > 0 && currentItemInPoolIndex < unassignedItems.length -1) {
-                                const nextItem = unassignedItems[currentItemInPoolIndex + 1];
-                                nextSelectedItemId = nextItem.id;
-                                setAnnouncement(`Auto-selected next item from pool: ${nextItem.value || 'image'}.`);
+                    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                        e.preventDefault();
+                        if (selectedItemId) {
+                            addLog(`Move Mode: Arrow key ${e.key} for item ${selectedItemId}`, 'action');
+                            const item = items.find(i => i.id === selectedItemId);
+                            if (!item) return;
+                            const currentTierId = item.tierId;
+                            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                                const tierIds = [null, ...tiers.map(t => t.id)];
+                                const currentTierIndex = tierIds.indexOf(currentTierId);
+                                let nextTierIndex;
+                                if (e.key === 'ArrowUp') {
+                                    nextTierIndex = currentTierIndex > 0 ? currentTierIndex - 1 : tierIds.length - 1;
+                                } else {
+                                    nextTierIndex = currentTierIndex < tierIds.length - 1 ? currentTierIndex + 1 : 0;
+                                }
+                                const nextTierId = tierIds[nextTierIndex];
+                                moveItem(selectedItemId, nextTierId);
                             } else {
-                                 setAnnouncement(`Selection cancelled. Last item in pool.`);
+                                setTiers(prevTiers => prevTiers.map(tier => {
+                                    if (tier.id === currentTierId) {
+                                        const itemIndex = tier.items.indexOf(selectedItemId);
+                                        if (itemIndex === -1) return tier;
+                                        const newItems = [...tier.items];
+                                        const newIndex = e.key === 'ArrowLeft' ? Math.max(0, itemIndex - 1) : Math.min(newItems.length - 1, itemIndex + 1);
+                                        if (newIndex !== itemIndex) {
+                                            [newItems[itemIndex], newItems[newIndex]] = [newItems[newIndex], newItems[itemIndex]];
+                                            const movedDirection = e.key === 'ArrowLeft' ? 'left' : 'right';
+                                            setAnnouncement(`Item moved ${movedDirection}.`);
+                                            lastManuallySelectedId.current = selectedItemId;
+                                        }
+                                        return { ...tier, items: newItems };
+                                    }
+                                    return tier;
+                                }));
+                            }
+                        } else if (selectedTierId) {
+                            addLog(`Move Mode: Arrow key ${e.key} for tier ${selectedTierId}`, 'action');
+                            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                                setTiers(prev => {
+                                    const tierIndex = prev.findIndex(t => t.id === selectedTierId);
+                                    if (tierIndex === -1) return prev;
+                                    const newIndex = e.key === 'ArrowUp' ? Math.max(0, tierIndex - 1) : Math.min(prev.length - 1, tierIndex + 1);
+                                    if (newIndex !== tierIndex) {
+                                        const newTiers = [...prev];
+                                        const [movedTier] = newTiers.splice(tierIndex, 1);
+                                        newTiers.splice(newIndex, 0, movedTier);
+                                        setAnnouncement(`Tier moved ${e.key === 'ArrowUp' ? 'up' : 'down'}.`);
+                                        lastMovedTierId.current = selectedTierId;
+                                        return newTiers;
+                                    }
+                                    return prev;
+                                });
                             }
                         } else {
-                            setAnnouncement(`Selection cancelled.`);
+                            addLog(`Navigation Mode: Arrow key ${e.key} from ${activeElement.id}`, 'action');
+                            handleNavigation(e.key, activeElement.id);
                         }
-
-                        handleItemClick(nextSelectedItemId);
                     }
+                };
+
+                document.addEventListener('keydown', handleKeyDown);
+                return () => {
+                    document.removeEventListener('keydown', handleKeyDown);
+                };
+            }, [selectedItemId, selectedTierId, items, tiers, moveItem, handleItemClick, handleTierClick, addLog]);
+
+
+            const { focusableGrid, focusableMap } = useMemo(() => {
+                const grid = [];
+                const map = {};
+
+                tiers.forEach((tier, rowIndex) => {
+                    const row = [`tier-label-${tier.id}`];
+                    tier.items.forEach(itemId => {
+                        row.push(`item-${itemId}`);
+                    });
+                    grid.push(row);
+                });
+
+                const unassignedItems = items.filter(item => item.tierId === null);
+                if (unassignedItems.length > 0) {
+                    grid.push(unassignedItems.map(item => `item-${item.id}`));
                 }
 
-                if (selectedItemId && selectedItemId === itemId) {
-                    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-                        e.preventDefault();
-                        const tierIds = [null, ...tiers.map(t => t.id)];
-                        const currentTierIndex = tierIds.indexOf(currentTierId);
-                        let nextTierIndex;
+                grid.forEach((row, rowIndex) => {
+                    row.forEach((id, colIndex) => {
+                        map[id] = { row: rowIndex, col: colIndex };
+                    });
+                });
 
-                        if (e.key === 'ArrowUp') {
-                            nextTierIndex = currentTierIndex > 0 ? currentTierIndex - 1 : tierIds.length - 1;
-                        } else {
-                            nextTierIndex = currentTierIndex < tierIds.length - 1 ? currentTierIndex + 1 : 0;
+                return { focusableGrid: grid, focusableMap: map };
+            }, [tiers, items]);
+
+            const handleNavigation = (key, currentId) => {
+                if (!focusableMap[currentId]) return;
+
+                const { row: currentRow, col: currentCol } = focusableMap[currentId];
+                let nextRow = currentRow;
+                let nextCol = currentCol;
+
+                switch (key) {
+                    case 'ArrowUp':
+                        nextRow = currentRow > 0 ? currentRow - 1 : focusableGrid.length - 1;
+                        break;
+                    case 'ArrowDown':
+                        nextRow = currentRow < focusableGrid.length - 1 ? currentRow + 1 : 0;
+                        break;
+                    case 'ArrowLeft':
+                        if (currentCol > 0) {
+                            nextCol = currentCol - 1;
                         }
-
-                        const nextTierId = tierIds[nextTierIndex];
-                        moveItem(itemId, nextTierId);
-                    }
-
-                    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-                         e.preventDefault();
-                         setTiers(prevTiers => prevTiers.map(tier => {
-                             if (tier.id === currentTierId) {
-                                 const itemIndex = tier.items.indexOf(itemId);
-                                 if (itemIndex === -1) return tier;
-                                 const newItems = [...tier.items];
-                                 const newIndex = e.key === 'ArrowLeft' ? Math.max(0, itemIndex - 1) : Math.min(newItems.length - 1, itemIndex + 1);
-                                 if (newIndex !== itemIndex) {
-                                    [newItems[itemIndex], newItems[newIndex]] = [newItems[newIndex], newItems[itemIndex]];
-                                    const movedDirection = e.key === 'ArrowLeft' ? 'left' : 'right';
-                                    setAnnouncement(`Item moved ${movedDirection}.`);
-                                    lastManuallySelectedId.current = itemId;
-                                 }
-                                 return { ...tier, items: newItems };
-                             }
-                             return tier;
-                         }));
-                    }
-                }
-            }, [selectedItemId, items, tiers, moveItem, autoSelectNext, selectedItemOriginTierId, handleItemClick]);
-
-            const handleTierKeyDown = useCallback((e, tierId) => {
-                if (e.key === ' ' || e.key === 'Enter') {
-                    e.preventDefault();
-                    handleTierClick(tierId);
+                        break;
+                    case 'ArrowRight':
+                        if (currentCol < focusableGrid[currentRow].length - 1) {
+                            nextCol = currentCol + 1;
+                        }
+                        break;
+                    default:
+                        return;
                 }
 
-                if (e.key === 'Escape') {
-                    if (selectedTierId) {
-                        setSelectedTierId(null);
-                        setAnnouncement(`Selection cancelled.`);
-                    }
+                if (key === 'ArrowUp' || key === 'ArrowDown') {
+                    nextCol = Math.min(currentCol, focusableGrid[nextRow].length - 1);
                 }
 
-                if (selectedTierId && selectedTierId === tierId) {
-                    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-                        e.preventDefault();
-                        setTiers(prev => {
-                            const tierIndex = prev.findIndex(t => t.id === tierId);
-                            if (tierIndex === -1) return prev;
-                            const newIndex = e.key === 'ArrowUp' ? Math.max(0, tierIndex - 1) : Math.min(prev.length - 1, tierIndex + 1);
-                            if (newIndex !== tierIndex) {
-                                const newTiers = [...prev];
-                                const [movedTier] = newTiers.splice(tierIndex, 1);
-                                newTiers.splice(newIndex, 0, movedTier);
-                                setAnnouncement(`Tier moved ${e.key === 'ArrowUp' ? 'up' : 'down'}.`);
-                                lastMovedTierId.current = tierId;
-                                return newTiers;
-                            }
-                            return prev;
-                        });
+                const nextId = focusableGrid[nextRow]?.[nextCol];
+                if (nextId) {
+                    const nextElement = document.getElementById(nextId);
+                    if (nextElement) {
+                        nextElement.focus();
                     }
                 }
-            }, [selectedTierId, handleTierClick]);
+            };
 
             // Focus management for keyboard moves AND selections
             useEffect(() => {
@@ -888,13 +968,13 @@
             }, [items, tiers]);
 
              useEffect(() => {
-                if (selectedItemId && document.activeElement?.id !== `item-${selectedItemId}`) {
-                    const itemElement = document.getElementById(`item-${selectedItemId}`);
-                    if (itemElement) {
-                        itemElement.focus();
-                    }
-                }
-            }, [selectedItemId]);
+                 if (selectedItemId && document.activeElement?.id !== `item-${selectedItemId}`) {
+                     const itemElement = document.getElementById(`item-${selectedItemId}`);
+                     if (itemElement) {
+                         itemElement.focus();
+                     }
+                 }
+             }, [selectedItemId]);
 
 
             // --- RESIZE HANDLERS ---
@@ -944,13 +1024,13 @@
             const dragState = { draggedItemId, draggedTierId, draggedOverItemId, draggedOverTierRowId, draggedOverTierAreaId, selectedItemId, selectedTierId };
             const itemProps = { itemWidth, itemHeight, tierLabelWidth };
             const itemSetters = { setItemWidth, setItemHeight, setTierLabelWidth };
-            const allHandlers = { handleItemDragStart, handleItemDragEnter, handleItemDragOver, handleItemDragLeave, handleItemDrop, handleTierAreaDragEnter, handleTierAreaDragOver, handleTierAreaDragLeave, handleTierLabelDragStart, handleTierRowDragOver, handleTierRowDragLeave, handleTierDrop, handleDeleteItem, handleDeleteTier, startEditingTier, cleanupDragStates, addLog, handleAddTier, handleAddItem, handlePasteItems, handleResetAllItemsToPool, handleSaveEditedTier, cancelEditingTier, handleExportState, handleImportState, handleItemImageUpload, handleItemKeyDown, handleTierKeyDown, handleItemClick, handleTierClick };
+            const allHandlers = { handleItemDragStart, handleItemDragEnter, handleItemDragOver, handleItemDragLeave, handleItemDrop, handleTierAreaDragEnter, handleTierAreaDragOver, handleTierAreaDragLeave, handleTierLabelDragStart, handleTierRowDragOver, handleTierRowDragLeave, handleTierDrop, handleDeleteItem, handleDeleteTier, startEditingTier, cleanupDragStates, addLog, handleAddTier, handleAddItem, handlePasteItems, handleResetAllItemsToPool, handleSaveEditedTier, cancelEditingTier, handleExportState, handleImportState, handleItemImageUpload, handleItemClick, handleTierClick };
             const uiState = { showConfiguration, editingTierId, showLogs };
             const uiSetters = { setShowConfiguration, setShowLogs };
             const data = { logs, standardColors };
             const editState = { editingTierLabel, editingTierColor, newTierColor };
             const editSetters = { setEditingTierLabel, setEditingTierColor, setNewTierColor };
-            const refs = { newTierNameRef, newItemNameRef, newItemImageFileRef, newItemImageUrlRef, pasteItemsRef, importFileRef };
+            const refs = { newTierNameRef, newItemNameRef, newItemImageFileRef, newItemImageUrlRef, pasteItemsRef, importFileRef, logDisplayRef };
 
             return (
                 <div className={`min-h-screen font-sans p-0 transition-colors duration-300 ${theme.bg} ${theme.text}`}>
@@ -1000,8 +1080,6 @@
                             itemSetters={itemSetters}
                             deleteMode={deleteMode}
                             setDeleteMode={setDeleteMode}
-                            autoSelectNext={autoSelectNext}
-                            setAutoSelectNext={setAutoSelectNext}
                             setContainerWidth={setContainerWidth}
                             toggleFullScreen={toggleFullScreen}
                             setDarkMode={setDarkMode}
