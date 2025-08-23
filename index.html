@@ -464,17 +464,18 @@
 
             const handleExportState = () => {
                 const stateToSave = { tiers, items, tierListTitle, itemPoolTitle, itemWidth, itemHeight, containerWidth, tierLabelWidth };
-                const jsonString = JSON.stringify(stateToSave, null, 2); // Pretty print JSON
+                const jsonString = JSON.stringify(stateToSave, null, 2);
                 const blob = new Blob([jsonString], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'tier-list-state.tierlist';
+                const fileName = `${tierListTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.tierlist`;
+                a.download = fileName;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
-                addLog('State exported to file.', 'action');
+                addLog(`State exported to ${fileName}`, 'action');
             };
 
             const handleImportState = (event) => {
