@@ -262,7 +262,8 @@
                 { keys: ['A', '←'], desc: 'Navigate left / Move item left within tier' },
                 { keys: ['S', '↓'], desc: 'Navigate down / Move item down a tier / Move tier down' },
                 { keys: ['D', '→'], desc: 'Navigate right / Move item right within tier' },
-                { keys: ['N', 'E'], desc: 'Select next item in the Item Pool' },
+                { keys: ['N', 'E'], desc: 'Select next item on screen' },
+                { keys: ['P', 'C'], desc: 'Select previous item on screen' },
                 { keys: ['F'], desc: 'Toggle fullscreen mode' },
             ];
 
@@ -893,24 +894,42 @@
                 });
             }, [tiers, addLog]);
 
-            const handleSelectNextItem = useCallback(() => {
-                const unassignedItems = items.filter(item => item.tierId === null);
-                if (unassignedItems.length === 0) {
-                    addLog("No items in the pool to select.", "info");
+            const allItemsOrdered = useMemo(() => {
+                const ordered = [];
+                tiers.forEach(tier => {
+                    tier.items.forEach(itemId => {
+                        ordered.push(itemId);
+                    });
+                });
+                const unassigned = items.filter(item => item.tierId === null).map(item => item.id);
+                return [...ordered, ...unassigned];
+            }, [tiers, items]);
+
+            const selectAdjacentItem = useCallback((direction) => {
+                if (allItemsOrdered.length === 0) {
+                    addLog("No items to select.", "info");
                     return;
                 }
-                const currentSelectedIndex = unassignedItems.findIndex(item => item.id === selectedItemId);
-                let nextItem;
-                if (currentSelectedIndex !== -1 && currentSelectedIndex < unassignedItems.length - 1) {
-                    nextItem = unassignedItems[currentSelectedIndex + 1];
+                const currentSelectedIndex = selectedItemId ? allItemsOrdered.indexOf(selectedItemId) : -1;
+                let nextIndex;
+
+                if (currentSelectedIndex === -1) {
+                    nextIndex = direction === 'next' ? 0 : allItemsOrdered.length - 1;
                 } else {
-                    nextItem = unassignedItems[0];
+                    if (direction === 'next') {
+                        nextIndex = currentSelectedIndex < allItemsOrdered.length - 1 ? currentSelectedIndex + 1 : 0;
+                    } else { // 'previous'
+                        nextIndex = currentSelectedIndex > 0 ? currentSelectedIndex - 1 : allItemsOrdered.length - 1;
+                    }
                 }
-                if (nextItem) {
-                    handleItemClick(nextItem.id);
-                    lastManuallySelectedId.current = nextItem.id;
+
+                const nextItemId = allItemsOrdered[nextIndex];
+                if (nextItemId) {
+                    setSelectedItemId(nextItemId);
+                    lastManuallySelectedId.current = nextItemId;
                 }
-            }, [items, selectedItemId, handleItemClick, addLog]);
+            }, [allItemsOrdered, selectedItemId, addLog]);
+
 
             useEffect(() => {
                 const handleKeyDown = (e) => {
@@ -927,7 +946,18 @@
                     if (showCommandsPopover) return;
 
                     if (e.key.toLowerCase() === 'f') { e.preventDefault(); toggleFullScreen(); addLog('Action: Toggled fullscreen with F key', 'action'); return; }
-                    if (e.key.toLowerCase() === 'n' || e.key.toLowerCase() === 'e') { e.preventDefault(); handleSelectNextItem(); return; }
+
+                    if (['n', 'e'].includes(e.key.toLowerCase())) {
+                        e.preventDefault();
+                        selectAdjacentItem('next');
+                        return;
+                    }
+                    if (['p', 'c'].includes(e.key.toLowerCase())) {
+                        e.preventDefault();
+                        selectAdjacentItem('previous');
+                        return;
+                    }
+
                     if (!activeElement.id) return;
                     const [type, id] = activeElement.id.split(/-(.+)/);
                     if (!id) return;
@@ -1001,7 +1031,7 @@
                 };
                 document.addEventListener('keydown', handleKeyDown);
                 return () => document.removeEventListener('keydown', handleKeyDown);
-            }, [selectedItemId, selectedTierId, items, tiers, moveItem, handleItemClick, handleTierClick, addLog, handleSelectNextItem, toggleFullScreen, showCommandsPopover]);
+            }, [selectedItemId, selectedTierId, items, tiers, moveItem, handleItemClick, handleTierClick, addLog, selectAdjacentItem, toggleFullScreen, showCommandsPopover]);
 
             const { focusableGrid, focusableMap } = useMemo(() => {
                 const grid = []; const map = {};
