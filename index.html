@@ -402,7 +402,7 @@
             const [itemPoolTitle, setItemPoolTitle] = useState(initialData?.itemPoolTitle || 'Item Pool');
             const [itemWidth, setItemWidth] = useState(initialData?.itemWidth || 80);
             const [itemHeight, setItemHeight] = useState(initialData?.itemHeight || 80);
-            const [containerWidth, setContainerWidth] = useState(initialData?.containerWidth || window.innerWidth);
+            const [containerWidth, setContainerWidth] = useState(window.innerWidth);
             const [tierLabelWidth, setTierLabelWidth] = useState(initialData?.tierLabelWidth || 128);
             const [deleteMode, setDeleteMode] = useState(false);
             const [isFullscreen, setIsFullscreen] = useState(false);
@@ -552,7 +552,7 @@
                             ctx.drawImage(img, 0, 0, width, height);
 
                             newItem.type = 'image';
-                            newItem.value = canvas.toDataURL('image/png');
+                            newItem.value = canvas.toDataURL('image/jpeg', 0.8);
                             setItems(p => [...p, newItem]);
                         };
                         img.src = reader.result;
@@ -600,7 +600,7 @@
                             ctx.drawImage(img, 0, 0, width, height);
 
                             newTier.type = 'image';
-                            newTier.value = canvas.toDataURL('image/png');
+                            newTier.value = canvas.toDataURL('image/jpeg', 0.8);
                             setTiers(p => [...p, newTier]);
                             addLog("Added and resized image tier.", "info");
                         };
@@ -685,7 +685,7 @@
                             const ctx = canvas.getContext('2d');
                             ctx.drawImage(img, 0, 0, width, height);
                             
-                            save(canvas.toDataURL('image/png'), 'image', editingTierColor);
+                            save(canvas.toDataURL('image/jpeg', 0.8), 'image', editingTierColor);
                         };
                         img.src = reader.result;
                     };
