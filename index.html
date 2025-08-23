@@ -311,7 +311,20 @@
                                 {/* General Settings */}
                                 <div className={`${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor} md:col-span-2 lg:col-span-3`}>
                                     <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-purple-300':'text-purple-600'} mb-3 flex items-center gap-2`}> <SettingsIcon size={20}/> General Settings</h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                                        <button onClick={() => setContainerWidth(window.innerWidth)} className={`w-full py-2 rounded-sm shadow-sm ${theme.buttonSecondaryBg} ${theme.buttonText} flex items-center justify-center gap-2`}>
+                                            Fit to Screen
+                                        </button>
+                                        <button onClick={toggleFullScreen} className={`w-full py-2 rounded-sm shadow-sm ${theme.buttonSecondaryBg} ${theme.buttonText} flex items-center justify-center gap-2`}>
+                                            {isFullscreen ? <MinimizeIcon size={20} /> : <MaximizeIcon size={20} />}
+                                            {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                                        </button>
+                                        <button onClick={() => setDarkMode(!darkMode)} className={`w-full py-2 rounded-sm shadow-sm ${theme.buttonSecondaryBg} ${theme.buttonText} flex items-center justify-center gap-2`}>
+                                            {darkMode ? <SunIcon size={20} /> : <MoonIcon size={20} />}
+                                            {darkMode ? "Light Mode" : "Dark Mode"}
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end pt-4 border-t border-gray-200 dark:border-gray-700">
                                         <div>
                                             <label htmlFor="tierLabelWidth" className={`block text-sm font-medium ${theme.inputText}`}>Category Width (px)</label>
                                             <input type="number" id="tierLabelWidth" value={localTierLabelWidth} onChange={e => setLocalTierLabelWidth(e.target.value)} onKeyDown={handleKeyDown} className={`mt-1 p-2 w-full border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
@@ -334,19 +347,6 @@
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                        <button onClick={() => setContainerWidth(window.innerWidth)} className={`w-full py-2 rounded-sm shadow-sm ${theme.buttonSecondaryBg} ${theme.buttonText} flex items-center justify-center gap-2`}>
-                                            Fit to Screen
-                                        </button>
-                                        <button onClick={toggleFullScreen} className={`w-full py-2 rounded-sm shadow-sm ${theme.buttonSecondaryBg} ${theme.buttonText} flex items-center justify-center gap-2`}>
-                                            {isFullscreen ? <MinimizeIcon size={20} /> : <MaximizeIcon size={20} />}
-                                            {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-                                        </button>
-                                        <button onClick={() => setDarkMode(!darkMode)} className={`w-full py-2 rounded-sm shadow-sm ${theme.buttonSecondaryBg} ${theme.buttonText} flex items-center justify-center gap-2`}>
-                                            {darkMode ? <SunIcon size={20} /> : <MoonIcon size={20} />}
-                                            {darkMode ? "Light Mode" : "Dark Mode"}
-                                        </button>
                                     </div>
                                 </div>
                                 {/* Edit/Create Tier */}
@@ -789,10 +789,13 @@
             useEffect(() => {
                 const handleKeyDown = (e) => {
                     const activeElement = document.activeElement;
-                    if (!activeElement || !activeElement.id) return;
+                    if (!activeElement || !activeElement.id || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
                     const [type, id] = activeElement.id.split(/-(.+)/);
                     if (!id) return;
+
+                    const keyMap = { 'w': 'ArrowUp', 'a': 'ArrowLeft', 's': 'ArrowDown', 'd': 'ArrowRight' };
+                    const mappedKey = keyMap[e.key.toLowerCase()] || e.key;
 
                     if (e.key === ' ' || e.key === 'Enter') {
                         e.preventDefault();
@@ -814,18 +817,18 @@
                         return;
                     }
 
-                    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(mappedKey)) {
                         e.preventDefault();
                         if (selectedItemId) {
-                            addLog(`Move Mode: Arrow key ${e.key} for item ${selectedItemId}`, 'action');
+                            addLog(`Move Mode: Arrow key ${mappedKey} for item ${selectedItemId}`, 'action');
                             const item = items.find(i => i.id === selectedItemId);
                             if (!item) return;
                             const currentTierId = item.tierId;
-                            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                            if (mappedKey === 'ArrowUp' || mappedKey === 'ArrowDown') {
                                 const tierIds = [null, ...tiers.map(t => t.id)];
                                 const currentTierIndex = tierIds.indexOf(currentTierId);
                                 let nextTierIndex;
-                                if (e.key === 'ArrowUp') {
+                                if (mappedKey === 'ArrowUp') {
                                     nextTierIndex = currentTierIndex > 0 ? currentTierIndex - 1 : tierIds.length - 1;
                                 } else {
                                     nextTierIndex = currentTierIndex < tierIds.length - 1 ? currentTierIndex + 1 : 0;
@@ -838,10 +841,10 @@
                                         const itemIndex = tier.items.indexOf(selectedItemId);
                                         if (itemIndex === -1) return tier;
                                         const newItems = [...tier.items];
-                                        const newIndex = e.key === 'ArrowLeft' ? Math.max(0, itemIndex - 1) : Math.min(newItems.length - 1, itemIndex + 1);
+                                        const newIndex = mappedKey === 'ArrowLeft' ? Math.max(0, itemIndex - 1) : Math.min(newItems.length - 1, itemIndex + 1);
                                         if (newIndex !== itemIndex) {
                                             [newItems[itemIndex], newItems[newIndex]] = [newItems[newIndex], newItems[itemIndex]];
-                                            const movedDirection = e.key === 'ArrowLeft' ? 'left' : 'right';
+                                            const movedDirection = mappedKey === 'ArrowLeft' ? 'left' : 'right';
                                             setAnnouncement(`Item moved ${movedDirection}.`);
                                             lastManuallySelectedId.current = selectedItemId;
                                         }
@@ -851,17 +854,17 @@
                                 }));
                             }
                         } else if (selectedTierId) {
-                            addLog(`Move Mode: Arrow key ${e.key} for tier ${selectedTierId}`, 'action');
-                            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                            addLog(`Move Mode: Arrow key ${mappedKey} for tier ${selectedTierId}`, 'action');
+                            if (mappedKey === 'ArrowUp' || mappedKey === 'ArrowDown') {
                                 setTiers(prev => {
                                     const tierIndex = prev.findIndex(t => t.id === selectedTierId);
                                     if (tierIndex === -1) return prev;
-                                    const newIndex = e.key === 'ArrowUp' ? Math.max(0, tierIndex - 1) : Math.min(prev.length - 1, tierIndex + 1);
+                                    const newIndex = mappedKey === 'ArrowUp' ? Math.max(0, tierIndex - 1) : Math.min(prev.length - 1, tierIndex + 1);
                                     if (newIndex !== tierIndex) {
                                         const newTiers = [...prev];
                                         const [movedTier] = newTiers.splice(tierIndex, 1);
                                         newTiers.splice(newIndex, 0, movedTier);
-                                        setAnnouncement(`Tier moved ${e.key === 'ArrowUp' ? 'up' : 'down'}.`);
+                                        setAnnouncement(`Tier moved ${mappedKey === 'ArrowUp' ? 'up' : 'down'}.`);
                                         lastMovedTierId.current = selectedTierId;
                                         return newTiers;
                                     }
@@ -869,8 +872,8 @@
                                 });
                             }
                         } else {
-                            addLog(`Navigation Mode: Arrow key ${e.key} from ${activeElement.id}`, 'action');
-                            handleNavigation(e.key, activeElement.id);
+                            addLog(`Navigation Mode: Arrow key ${mappedKey} from ${activeElement.id}`, 'action');
+                            handleNavigation(mappedKey, activeElement.id);
                         }
                     }
                 };
