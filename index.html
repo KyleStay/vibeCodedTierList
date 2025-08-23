@@ -574,7 +574,14 @@
                         setItemHeight(data.itemHeight);
                         setContainerWidth(data.containerWidth);
                         setTierLabelWidth(data.tierLabelWidth);
+
+                        const firstUnassignedItem = data.items.find(item => item.tierId === null);
+                        if (firstUnassignedItem) {
+                            setSelectedItemId(firstUnassignedItem.id);
+                        }
+                        window.scrollTo(0, 0);
                         addLog('State successfully imported from file.', 'action');
+
                     } catch (err) {
                         addLog(`Error reading file: ${err.message}`, 'error');
                     } finally {
@@ -593,6 +600,9 @@
                 const files = event.target.files;
                 if (!files || files.length === 0) return;
                 addLog(`Processing ${files.length} image(s)...`, 'info');
+
+                let isFirstImage = true;
+
                 Array.from(files).forEach(file => {
                     let newItem = { id: generateId(), tierId: null };
                     const reader = new FileReader();
@@ -613,12 +623,18 @@
                             newItem.type = 'image';
                             newItem.value = canvas.toDataURL('image/jpeg', 0.8);
                             setItems(p => [...p, newItem]);
+                            if (isFirstImage) {
+                                setSelectedItemId(newItem.id);
+                                isFirstImage = false;
+                            }
                         };
                         img.src = reader.result;
                     };
                     reader.onerror = () => addLog(`Error reading file: ${file.name}`, "error");
                     reader.readAsDataURL(file);
                 });
+
+                window.scrollTo(0, 0);
                 addLog(`Added ${files.length} items from files.`, 'action');
                 if (newItemImageFileRef.current) newItemImageFileRef.current.value = '';
             };
