@@ -36,6 +36,19 @@
         /* Toggle Switch Styles */
         .toggle-checkbox:checked { right: 0; border-color: #4F46E5; }
         .toggle-checkbox:checked + .toggle-label { background-color: #4F46E5; }
+
+        /* Accessibility Focus & Selection Styles */
+        *:focus-visible {
+            outline: 3px solid #60A5FA;
+            outline-offset: 2px;
+            border-radius: 2px;
+        }
+        .keyboard-selected {
+            outline: 3px solid #4F46E5 !important;
+            outline-offset: 2px;
+            border-radius: 2px;
+            box-shadow: 0 0 10px #4F46E5;
+        }
     </style>
 </head>
 <body>
@@ -48,7 +61,6 @@
         const PlusCircleIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>;
         const ListIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>;
         const Trash2Icon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 6h18"/><path d="M19 6v14c0 1.1-.9 2-2 2H7c-1.1 0-2-.9-2-2V6"/><path d="M8 6V4c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>;
-        const GripVerticalIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M9 6v12"/><path d="M15 6v12"/></svg>;
         const SunIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="M4.93 4.93l1.41 1.41"/><path d="M17.66 17.66l1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="M4.93 19.07l1.41-1.41"/><path d="M17.66 6.34l1.41-1.41"/></svg>;
         const MoonIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>;
         const PencilIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>;
@@ -64,10 +76,11 @@
 
         // --- STATE VALIDATION & SERIALIZATION ---
         const validateStateData = (parsedData) => {
-            if (parsedData && Array.isArray(parsedData.tiers) && Array.isArray(parsedData.items)) {
+            if (parsedData && typeof parsedData === 'object' && !Array.isArray(parsedData)) {
                 const validatedData = {
                     ...parsedData,
-                    tiers: parsedData.tiers.map(tier => ({ ...tier, items: Array.isArray(tier.items) ? tier.items : [] })),
+                    tiers: Array.isArray(parsedData.tiers) ? parsedData.tiers.map(tier => ({ ...tier, items: Array.isArray(tier.items) ? tier.items : [] })) : undefined,
+                    items: Array.isArray(parsedData.items) ? parsedData.items : undefined,
                     itemWidth: parsedData.itemWidth || 80,
                     itemHeight: parsedData.itemHeight || 80,
                     containerWidth: parsedData.containerWidth || window.innerWidth,
@@ -75,13 +88,17 @@
                     tierLabelWidth: parsedData.tierLabelWidth || 128,
                     tierListTitle: parsedData.tierListTitle || "My Tier List"
                 };
-                const validItemIds = new Set(validatedData.items.map(i => i.id));
-                validatedData.tiers = validatedData.tiers.map(tier => ({ ...tier, items: tier.items.filter(id => validItemIds.has(id)) }));
-                const validTierIds = new Set(validatedData.tiers.map(t => t.id));
-                validatedData.items = validatedData.items.map(item => ({ ...item, tierId: validTierIds.has(item.tierId) ? item.tierId : null }));
+
+                if (validatedData.tiers && validatedData.items) {
+                    const validItemIds = new Set(validatedData.items.map(i => i.id));
+                    validatedData.tiers = validatedData.tiers.map(tier => ({ ...tier, items: tier.items.filter(id => validItemIds.has(id)) }));
+                    const validTierIds = new Set(validatedData.tiers.map(t => t.id));
+                    validatedData.items = validatedData.items.map(item => ({ ...item, tierId: validTierIds.has(item.tierId) ? item.tierId : null }));
+                }
+
                 return { data: validatedData, error: null };
             }
-            return { data: null, error: { message: "Invalid state structure.", type: "warning" } };
+            return { data: null, error: { message: "Invalid state structure from URL.", type: "warning" } };
         };
 
         const serializeState = (stateData) => {
@@ -101,9 +118,16 @@
 
         // --- UI COMPONENTS ---
 
-        const DraggableItem = memo(({ item, itemWidth, itemHeight, theme, draggedItemId, draggedOverItemId, handlers, addLog, deleteMode, finalizeMode }) => (
+        const DraggableItem = memo(({ item, itemWidth, itemHeight, theme, draggedItemId, draggedOverItemId, handlers, addLog, deleteMode, finalizeMode, selectedItemId }) => (
             <div
+                id={`item-${item.id}`}
+                tabIndex={finalizeMode ? -1 : 0}
+                role="button"
+                aria-pressed={selectedItemId === item.id}
+                aria-label={`Item: ${item.value || 'image'}. ${item.tierId ? `In tier ${item.tierId}` : 'In item pool'}. Press Space or Enter to select.`}
                 draggable={!finalizeMode}
+                onClick={() => handlers.handleItemClick(item.id)}
+                onKeyDown={(e) => handlers.handleItemKeyDown(e, item.id)}
                 onDragStart={(e) => handlers.handleItemDragStart(e, item.id)}
                 onDragEnter={(e) => handlers.handleItemDragEnter(e, item.id, item.tierId)}
                 onDragOver={(e) => handlers.handleItemDragOver(e, item.id, item.tierId)}
@@ -112,7 +136,8 @@
                 onDragEnd={handlers.cleanupDragStates}
                 style={{ width: `${itemWidth}px`, height: `${itemHeight}px` }}
                 className={`relative z-10 cursor-grab active:cursor-grabbing
-                    ${draggedItemId === item.id ? 'opacity-30' : ''}`}
+                    ${draggedItemId === item.id ? 'opacity-30' : ''}
+                    ${selectedItemId === item.id ? 'keyboard-selected' : ''}`}
             >
                 <div
                     className={`w-full h-full flex items-center justify-center overflow-hidden ${theme.itemBg} border ${theme.borderColor} rounded-sm shadow-sm transition-all duration-200
@@ -126,16 +151,17 @@
                     )}
                 </div>
                 {!finalizeMode && <button 
-                    onClick={() => handlers.handleDeleteItem(item.id)} 
+                    onClick={(e) => { e.stopPropagation(); handlers.handleDeleteItem(item.id); }}
                     className={`absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 z-20 transition-opacity ${deleteMode ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                    aria-label={`Delete item ${item.value}`}
                 >
                     <Trash2Icon size={14} />
                 </button>}
             </div>
         ));
 
-        const TierRow = ({ tier, items, theme, dragState, handlers, itemProps, index, deleteMode, finalizeMode }) => {
-            const { draggedTierId, draggedOverTierRowId, draggedOverTierAreaId, draggedItemId, draggedOverItemId } = dragState;
+        const TierRow = ({ tier, items, theme, dragState, handlers, itemProps, index, deleteMode, finalizeMode, selectedTierId }) => {
+            const { draggedTierId, draggedOverTierRowId, draggedOverTierAreaId, draggedItemId, draggedOverItemId, selectedItemId } = dragState;
             const tierItems = tier.items.map(itemId => items.find(i => i.id === itemId)).filter(Boolean);
 
             return (
@@ -148,16 +174,23 @@
                         ${index > 0 ? `${theme.borderColor} border-t` : ''}`}
                 >
                     <div
+                        id={`tier-label-${tier.id}`}
+                        tabIndex={finalizeMode ? -1 : 0}
+                        role="button"
+                        aria-pressed={selectedTierId === tier.id}
+                        aria-label={`Tier: ${tier.value}. Press Space or Enter to select.`}
+                        onClick={() => handlers.handleTierClick(tier.id)}
+                        onKeyDown={(e) => handlers.handleTierKeyDown(e, tier.id)}
                         draggable={!finalizeMode}
                         onDragStart={(e) => handlers.handleTierLabelDragStart(e, tier.id)}
                         onDragEnd={handlers.cleanupDragStates}
-                        className={`relative flex-shrink-0 p-3 flex items-center justify-center text-center font-bold text-lg text-black group ${!finalizeMode ? 'tier-label-draggable' : ''} ${draggedTierId === tier.id ? 'tier-label-dragging' : ''}`}
+                        className={`relative flex-shrink-0 p-3 flex items-center justify-center text-center font-bold text-lg text-black group ${!finalizeMode ? 'tier-label-draggable' : ''} ${draggedTierId === tier.id ? 'tier-label-dragging' : ''} ${selectedTierId === tier.id ? 'keyboard-selected' : ''}`}
                         style={{ backgroundColor: tier.color, width: `${itemProps.tierLabelWidth}px` }}
                     >
                         {tier.type === 'image' ? <img src={tier.value} alt="Tier" className="w-full h-auto max-h-full object-contain pointer-events-none" /> : <span className="pointer-events-none">{tier.value}</span>}
                         {!finalizeMode && <>
-                            <button onClick={() => handlers.handleDeleteTier(tier.id)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 z-10"> <Trash2Icon size={14} /> </button>
-                            <button onClick={() => handlers.startEditingTier(tier)} className="absolute top-1 left-1 bg-gray-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 z-10"> <PencilIcon size={14} /> </button>
+                            <button onClick={(e) => { e.stopPropagation(); handlers.handleDeleteTier(tier.id); }} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 z-10" aria-label={`Delete tier ${tier.value}`}> <Trash2Icon size={14} /> </button>
+                            <button onClick={(e) => { e.stopPropagation(); handlers.startEditingTier(tier); }} className="absolute top-1 left-1 bg-gray-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 z-10" aria-label={`Edit tier ${tier.value}`}> <PencilIcon size={14} /> </button>
                         </>}
                     </div>
                     <div
@@ -167,16 +200,16 @@
                         onDrop={(e) => handlers.handleItemDrop(e, tier.id, null)}
                         className={`flex-grow p-2 flex flex-wrap gap-2 items-start justify-start min-h-[100px] ${theme.containerBg}
                             ${draggedOverTierAreaId === tier.id && draggedItemId && !draggedOverItemId ? 'drag-over-tier-area' : ''}`}
+                        aria-label={`Tier ${tier.value} content area`}
                     >
-                        {tierItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} finalizeMode={finalizeMode} />)}
-                        {tierItems.length === 0 && !finalizeMode && <p className={`${theme.darkMode ? 'text-gray-500' : 'text-gray-400'} text-sm italic p-4 pointer-events-none`}>Drag items here...</p>}
+                        {tierItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} finalizeMode={finalizeMode} selectedItemId={selectedItemId} />)}
                     </div>
                 </div>
             );
         };
 
-        const ItemPool = ({ items, itemPoolTitle, theme, dragState, handlers, itemProps, deleteMode, finalizeMode }) => {
-            const { draggedOverTierAreaId, draggedItemId, draggedOverItemId } = dragState;
+        const ItemPool = ({ items, itemPoolTitle, setItemPoolTitle, theme, dragState, handlers, itemProps, deleteMode, finalizeMode }) => {
+            const { draggedOverTierAreaId, draggedItemId, draggedOverItemId, selectedItemId } = dragState;
             const unassignedItems = items.filter(item => item.tierId === null);
 
             return (
@@ -187,19 +220,27 @@
                     onDrop={(e) => handlers.handleItemDrop(e, null, null)}
                     className={`relative p-4 min-h-[150px] flex flex-col w-full flex-grow ${theme.containerBg} ${theme.borderColor} border-t
                         ${draggedOverTierAreaId === null && draggedItemId ? 'drag-over-tier-area' : ''}`}
+                    aria-label="Item Pool area"
                 >
-                    <h2 className={`text-xl font-semibold ${theme.text} mb-3 flex items-center justify-center gap-2`}><GripVerticalIcon size={20} /> {itemPoolTitle}</h2>
-                    <div className="flex flex-wrap gap-2 justify-center sm:justify-start flex-grow min-h-[100px]">
-                        {unassignedItems.length === 0 && !finalizeMode ? <p className={`${theme.darkMode ? 'text-gray-400' : 'text-gray-600'} text-sm text-center w-full`}>Add or drag items here.</p> : 
-                            unassignedItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} finalizeMode={finalizeMode} />)
-                        }
+                    <div className={`text-xl font-semibold ${theme.text} mb-3 flex items-center justify-center gap-2`}>
+                        <input
+                            type="text"
+                            value={itemPoolTitle}
+                            onChange={(e) => setItemPoolTitle(e.target.value)}
+                            className={`bg-transparent border-none focus:outline-none focus:ring-0 text-center p-0 font-semibold ${theme.text}`}
+                            aria-label="Item pool title"
+                            disabled={finalizeMode}
+                        />
                     </div>
-                    {!finalizeMode && <button onClick={handlers.handleResetAllItemsToPool} className={`absolute bottom-4 right-4 w-12 h-12 rounded-full shadow-lg flex items-center justify-center ${theme.darkMode ? 'bg-red-700 hover:bg-red-800' : 'bg-red-500 hover:bg-red-600'} ${theme.buttonText}`}><RotateCcwIcon size={24}/></button>}
+                    <div className="flex flex-wrap gap-2 justify-center sm:justify-start flex-grow min-h-[100px]">
+                        {unassignedItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} finalizeMode={finalizeMode} selectedItemId={selectedItemId} />)}
+                    </div>
+                    {!finalizeMode && <button onClick={handlers.handleResetAllItemsToPool} className={`absolute bottom-4 right-4 w-12 h-12 rounded-full shadow-lg flex items-center justify-center ${theme.darkMode ? 'bg-red-700 hover:bg-red-800' : 'bg-red-500 hover:bg-red-600'} ${theme.buttonText}`} aria-label="Reset all items to pool"><RotateCcwIcon size={24}/></button>}
                 </div>
             );
         };
 
-        const ConfigurationPanel = ({ theme, uiState, uiSetters, data, dataHandlers, editState, editSetters, refs, itemProps, itemSetters, deleteMode, setDeleteMode }) => {
+        const ConfigurationPanel = ({ theme, uiState, uiSetters, data, dataHandlers, editState, editSetters, refs, itemProps, itemSetters, deleteMode, setDeleteMode, autoSelectNext, setAutoSelectNext }) => {
             const { showConfiguration, editingTierId, showLogs } = uiState;
             const { setShowConfiguration, setShowLogs } = uiSetters;
             const { logs, standardColors } = data;
@@ -254,7 +295,7 @@
                 <div className={`${theme.containerBg} p-4 w-full ${theme.borderColor} border-t`}>
                     <h2 className={`text-2xl font-bold ${theme.text} mb-4 text-center flex items-center justify-center gap-2`}>
                         <SettingsIcon size={24} /> Configuration
-                        <button onClick={() => setShowConfiguration(!showConfiguration)} className={`p-1 rounded-full ${theme.darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-300 hover:bg-gray-400'}`}> {showConfiguration ? <ChevronUpIcon size={20} /> : <ChevronDownIcon size={20} />} </button>
+                        <button onClick={() => setShowConfiguration(!showConfiguration)} className={`p-1 rounded-full ${theme.darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-300 hover:bg-gray-400'}`} aria-expanded={showConfiguration}> {showConfiguration ? <ChevronUpIcon size={20} /> : <ChevronDownIcon size={20} />} </button>
                     </h2>
                     {showConfiguration && (
                         <>
@@ -275,13 +316,20 @@
                                             <label htmlFor="itemHeight" className={`block text-sm font-medium ${theme.inputText}`}>Item Height (px)</label>
                                             <input type="number" id="itemHeight" value={localHeight} onChange={e => setLocalHeight(e.target.value)} onKeyDown={handleKeyDown} className={`mt-1 p-2 w-full border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
                                         </div>
-                                        <div className="sm:col-span-2 lg:col-span-3 mt-2 grid grid-cols-2 gap-4">
+                                        <div className="sm:col-span-2 lg:col-span-3 mt-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
                                             <button onClick={handleSizeUpdate} className={`w-full py-2 rounded-sm shadow-sm ${theme.buttonSecondaryBg} ${theme.buttonText}`}>Update Sizes</button>
                                             <div className="flex justify-center items-center">
                                                 <label htmlFor="deleteModeToggle" className={`text-sm font-medium ${theme.inputText} mr-3`}>Delete Mode</label>
                                                 <div className="relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
                                                     <input type="checkbox" name="toggle" id="deleteModeToggle" checked={deleteMode} onChange={() => setDeleteMode(!deleteMode)} className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
                                                     <label htmlFor="deleteModeToggle" className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                                                </div>
+                                            </div>
+                                            <div className="flex justify-center items-center">
+                                                <label htmlFor="autoSelectToggle" className={`text-sm font-medium ${theme.inputText} mr-3`}>Auto-select Next</label>
+                                                <div className="relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
+                                                    <input type="checkbox" name="toggle" id="autoSelectToggle" checked={autoSelectNext} onChange={() => setAutoSelectNext(!autoSelectNext)} className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                                                    <label htmlFor="autoSelectToggle" className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
                                                 </div>
                                             </div>
                                         </div>
@@ -294,10 +342,10 @@
                                         <input type="text" value={editingTierLabel} onChange={e=>setEditingTierLabel(e.target.value)} placeholder="Label" className={`w-full p-2 mb-2 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
                                         <input type="text" ref={editTierImageUrlRef} defaultValue={editingTierImageUrl} onChange={e=>setEditingTierImageUrl(e.target.value)} placeholder="Image URL" className={`w-full p-2 mb-2 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
                                         <input type="file" ref={editTierImageFileRef} onChange={e=>setEditingTierImageFile(e.target.files[0])} accept="image/*" className={`w-full mb-2 text-sm ${theme.inputText} file:mr-2 file:py-1 file:px-3 file:rounded-sm file:border-0 ${theme.darkMode ? 'file:bg-indigo-700 file:text-indigo-100':'file:bg-indigo-200 file:text-indigo-700'}`}/>
-                                        <div className="flex items-center gap-2 mb-2"> {standardColors.map(c=><button key={c} onClick={()=>setEditingTierColor(c)} className={`w-7 h-7 rounded-full border-2 ${editingTierColor===c?(theme.darkMode?'border-white':'border-black'):'border-transparent'}`} style={{backgroundColor:c}}/>)} </div>
+                                        <div className="flex items-center gap-2 mb-2"> {standardColors.map(c=><button key={c} onClick={()=>setEditingTierColor(c)} className={`w-7 h-7 rounded-full border-2 ${editingTierColor===c?(theme.darkMode?'border-white':'border-black'):'border-transparent'}`} style={{backgroundColor:c}} aria-label={`Set color to ${c}`}/>)} </div>
                                         <div className="flex items-center gap-2 mb-3">
-                                            <input type="color" value={editingTierColor} onChange={e=>setEditingTierColor(e.target.value)} className={`w-9 h-9 rounded-sm ${theme.darkMode?'border-gray-600':'border-gray-400'} border`}/>
-                                            <input type="text" value={editingTierColor} onChange={e=>handleHexColorChange(e,true)} placeholder="#hex" className={`p-2 w-28 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                                            <input type="color" value={editingTierColor} onChange={e=>setEditingTierColor(e.target.value)} className={`w-9 h-9 rounded-sm ${theme.darkMode?'border-gray-600':'border-gray-400'} border`} aria-label="Custom color picker"/>
+                                            <input type="text" value={editingTierColor} onChange={e=>handleHexColorChange(e,true)} placeholder="#hex" className={`p-2 w-28 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`} aria-label="Hex color value"/>
                                         </div>
                                         <div className="flex gap-2"><button onClick={handleSaveEditedTier} className={`flex-1 py-2 ${theme.darkMode?'bg-indigo-600 hover:bg-indigo-700':'bg-indigo-500 hover:bg-indigo-600'} ${theme.buttonText} rounded-sm`}>Save</button> <button onClick={cancelEditingTier} className={`flex-1 py-2 ${theme.buttonSecondaryBg} ${theme.buttonText} rounded-sm`}>Cancel</button></div>
                                     </div>
@@ -306,24 +354,28 @@
                                         <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-blue-300':'text-blue-600'} mb-2 flex items-center gap-2`}> <PlusCircleIcon size={20}/> Create Tier</h3>
                                         <input type="text" ref={newTierNameRef} placeholder="Label" className={`w-full p-2 mb-2 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
                                         <input type="file" ref={newTierImageRef} accept="image/*" className={`w-full mb-2 text-sm ${theme.inputText} file:mr-2 file:py-1 file:px-3 file:rounded-sm file:border-0 ${theme.darkMode ? 'file:bg-blue-800 file:text-blue-100':'file:bg-blue-200 file:text-blue-700'}`}/>
-                                        <div className="flex items-center gap-2 mb-2"> {standardColors.map(c=><button key={c} onClick={()=>setNewTierColor(c)} className={`w-7 h-7 rounded-full border-2 ${newTierColor===c?(theme.darkMode?'border-white':'border-black'):'border-transparent'}`} style={{backgroundColor:c}}/>)} </div>
+                                        <div className="flex items-center gap-2 mb-2"> {standardColors.map(c=><button key={c} onClick={()=>setNewTierColor(c)} className={`w-7 h-7 rounded-full border-2 ${newTierColor===c?(theme.darkMode?'border-white':'border-black'):'border-transparent'}`} style={{backgroundColor:c}} aria-label={`Set color to ${c}`}/>)} </div>
                                         <div className="flex items-center gap-2 mb-3">
-                                            <input type="color" value={newTierColor} onChange={e=>setNewTierColor(e.target.value)} className={`w-9 h-9 rounded-sm ${theme.darkMode?'border-gray-600':'border-gray-400'} border`}/>
-                                            <input type="text" value={newTierColor} onChange={e=>handleHexColorChange(e,false)} placeholder="#hex" className={`p-2 w-28 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                                            <input type="color" value={newTierColor} onChange={e=>setNewTierColor(e.target.value)} className={`w-9 h-9 rounded-sm ${theme.darkMode?'border-gray-600':'border-gray-400'} border`} aria-label="Custom color picker"/>
+                                            <input type="text" value={newTierColor} onChange={e=>handleHexColorChange(e,false)} placeholder="#hex" className={`p-2 w-28 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`} aria-label="Hex color value"/>
                                         </div>
                                         <button onClick={handleAddTier} className={`w-full py-2 ${theme.buttonPrimaryBg} ${theme.buttonText} rounded-sm`}>Add Tier</button>
                                     </div>
                                 )}
-                                {/* Add Item */}
+                               {/* Add Item */}
                                 <div className={`${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor}`}>
-                                    <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-green-300':'text-green-600'} mb-2 flex items-center gap-2`}> <PlusCircleIcon size={20}/> Add Item</h3>
-                                    <input type="text" ref={newItemNameRef} placeholder="Name" className={`w-full p-2 mb-2 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
-                                    <input type="text" ref={newItemImageUrlRef} placeholder="Image URL" className={`w-full p-2 mb-2 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
-                                    <label className={`w-full mb-3 text-sm ${theme.inputText} p-2 text-center rounded-sm border-2 border-dashed ${theme.borderColor} cursor-pointer ${theme.darkMode ? 'hover:bg-green-800/50' : 'hover:bg-green-200/50'}`}>
-                                        Select Image(s)
-                                        <input type="file" ref={newItemImageFileRef} accept="image/*" multiple onChange={dataHandlers.handleItemImageUpload} className="hidden"/>
-                                    </label>
-                                    <button onClick={handleAddItem} className={`w-full py-2 ${theme.darkMode?'bg-green-600 hover:bg-green-700':'bg-green-500 hover:bg-green-600'} ${theme.buttonText} rounded-sm`}>Add Text/URL Item</button>
+                                    <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-green-300':'text-green-600'} mb-3 flex items-center gap-2`}> <PlusCircleIcon size={20}/> Add Item</h3>
+                                    <div className="flex flex-col gap-3">
+                                        <input type="text" ref={newItemNameRef} placeholder="Name" className={`w-full p-2 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                                        <input type="text" ref={newItemImageUrlRef} placeholder="Image URL" className={`w-full p-2 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                                        <div className="flex flex-col gap-2 pt-1">
+                                            <label className={`w-full py-2 px-4 text-center rounded-sm cursor-pointer ${theme.darkMode?'bg-green-600/80 hover:bg-green-700/80':'bg-green-500/80 hover:bg-green-600/80'} ${theme.buttonText}`}>
+                                                Select Image(s) From Device
+                                                <input type="file" ref={newItemImageFileRef} accept="image/*" multiple onChange={dataHandlers.handleItemImageUpload} className="hidden"/>
+                                            </label>
+                                            <button onClick={handleAddItem} className={`w-full py-2 ${theme.darkMode?'bg-green-600 hover:bg-green-700':'bg-green-500 hover:bg-green-600'} ${theme.buttonText} rounded-sm`}>Add Text/URL Item</button>
+                                        </div>
+                                    </div>
                                 </div>
                                 {/* Paste Items */}
                                 <div className={`${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor}`}>
@@ -342,6 +394,7 @@
                                             ref={importFileRef}
                                             onChange={dataHandlers.handleImportState}
                                             className="hidden"
+                                            accept=".tierlist,application/json"
                                         />
                                         <button
                                             onClick={() => importFileRef.current.click()}
@@ -362,7 +415,7 @@
                             <div className={`${theme.containerBg} p-0 w-full ${theme.darkMode ? 'border-t border-gray-700' : 'border-t border-gray-300'} mt-4 pt-4`}>
                                 <h3 className={`text-xl font-semibold ${theme.text} mb-3 text-center flex items-center justify-center gap-2`}>
                                     <FileTextIcon size={20} /> Application Logs
-                                    <button onClick={()=>setShowLogs(!showLogs)} className={`p-1 rounded-full ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>{showLogs?<ChevronUpIcon size={18}/>:<ChevronDownIcon size={18}/>}</button>
+                                    <button onClick={()=>setShowLogs(!showLogs)} className={`p-1 rounded-full ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`} aria-expanded={showLogs}>{showLogs?<ChevronUpIcon size={18}/>:<ChevronDownIcon size={18}/>}</button>
                                 </h3>
                                 {showLogs && (<>
                                     <div className="flex gap-2 mb-3"> <button onClick={copyLogsToClipboard} className={`flex-1 py-1.5 px-3 rounded-sm ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>Copy</button> </div>
@@ -385,6 +438,7 @@
             // --- STATE MANAGEMENT ---
             const [darkMode, setDarkMode] = useState(true);
             const [logs, setLogs] = useState([]);
+            const [announcement, setAnnouncement] = useState("");
             const addLog = useCallback((message, type = 'info') => setLogs(prev => [{ message, type, timestamp: new Date().toLocaleTimeString() }, ...prev].slice(0, 100)), []);
 
             const initialDeserializedResult = deserializeState(window.location.hash.substring(1));
@@ -393,7 +447,7 @@
             const [tiers, setTiers] = useState(initialData?.tiers || [
                 { id: 's', type: 'name', value: 'S', items: [], color: '#ff7f7f' }, { id: 'a', type: 'name', value: 'A', items: [], color: '#ffbf7f' },
                 { id: 'b', type: 'name', value: 'B', items: [], color: '#ffff7f' }, { id: 'c', type: 'name', value: 'C', items: [], color: '#bfff7f' },
-                { id: 'd', type: 'name', value: 'D', items: [], color: '#7fbfff' }, { id: 'e', type: 'name', value: 'E', items: [], color: '#a27fff' }, 
+                { id: 'd', type: 'name', value: 'D', items: [], color: '#7fbfff' },
                 { id: 'f', type: 'name', value: 'F', items: [], color: '#bf7fff' },
             ]);
             const [items, setItems] = useState(initialData?.items || []);
@@ -417,6 +471,14 @@
             const [draggedOverTierRowId, setDraggedOverTierRowId] = useState(null);
             const [draggedOverTierAreaId, setDraggedOverTierAreaId] = useState(null);
 
+            // A11y State
+            const [selectedItemId, setSelectedItemId] = useState(null);
+            const [selectedTierId, setSelectedTierId] = useState(null);
+            const [selectedItemOriginTierId, setSelectedItemOriginTierId] = useState(null);
+            const [autoSelectNext, setAutoSelectNext] = useState(true);
+            const lastManuallySelectedId = useRef(null);
+            const lastMovedTierId = useRef(null);
+
             const [editingTierId, setEditingTierId] = useState(null);
             const [editingTierLabel, setEditingTierLabel] = useState('');
             const [editingTierColor, setEditingTierColor] = useState('#888888');
@@ -428,19 +490,21 @@
             const newItemNameRef = useRef(null); const newItemImageFileRef = useRef(null); const newItemImageUrlRef = useRef(null);
             const pasteItemsRef = useRef(null); const editTierImageFileRef = useRef(null); const editTierImageUrlRef = useRef(null);
             const appContainerRef = useRef(null); const resizeDragStartRef = useRef({ x: 0, width: 0 });
-            const importFileRef = useRef(null); // Ref for the hidden file input
+            const importFileRef = useRef(null);
             const isResizingRef = useRef(isResizing);
             useEffect(() => { isResizingRef.current = isResizing; }, [isResizing]);
 
             const standardColors = ['#ff7f7f', '#ffbf7f', '#ffff7f', '#bfff7f', '#7fbfff', '#bf7fff', '#c0c0c0', '#404040'];
             
             useEffect(() => { document.documentElement.classList.toggle('dark', darkMode); document.body.classList.toggle('bg-black', darkMode); document.body.classList.toggle('bg-gray-100', !darkMode); }, [darkMode]);
+
             useEffect(() => {
-                const stateToSave = { tiers, items, tierListTitle, itemWidth, itemHeight, containerWidth, itemPoolTitle, tierLabelWidth };
+                const stateToSave = { tierListTitle, itemWidth, itemHeight, containerWidth, itemPoolTitle, tierLabelWidth };
                 const hashString = serializeState(stateToSave);
                 const id = setTimeout(() => { if (window.location.hash.substring(1) !== hashString) { window.location.hash = hashString; } }, 700);
                 return () => clearTimeout(id);
-            }, [tiers, items, tierListTitle, itemWidth, itemHeight, containerWidth, itemPoolTitle, tierLabelWidth]);
+            }, [tierListTitle, itemWidth, itemHeight, containerWidth, itemPoolTitle, tierLabelWidth]);
+
             useEffect(() => { if (initialDeserializedResult.error) { addLog(initialDeserializedResult.error.message, initialDeserializedResult.error.type); } }, [initialDeserializedResult.error, addLog]);
 
             const toggleFullScreen = () => {
@@ -461,6 +525,7 @@
 
             const generateId = useCallback(() => crypto.randomUUID(), []);
 
+            // --- DATA HANDLERS ---
             const handleExportState = () => {
                 const stateToSave = { tiers, items, tierListTitle, itemPoolTitle, itemWidth, itemHeight, containerWidth, tierLabelWidth };
                 const jsonString = JSON.stringify(stateToSave, null, 2);
@@ -492,9 +557,8 @@
                             return;
                         }
 
-                        // Apply the validated state
-                        setTiers(data.tiers);
-                        setItems(data.items);
+                        setTiers(data.tiers || []);
+                        setItems(data.items || []);
                         setTierListTitle(data.tierListTitle);
                         setItemPoolTitle(data.itemPoolTitle);
                         setItemWidth(data.itemWidth);
@@ -505,7 +569,6 @@
                     } catch (err) {
                         addLog(`Error reading file: ${err.message}`, 'error');
                     } finally {
-                        // Reset file input to allow re-uploading the same file
                         if (importFileRef.current) {
                             importFileRef.current.value = null;
                         }
@@ -520,9 +583,7 @@
             const handleItemImageUpload = (event) => {
                 const files = event.target.files;
                 if (!files || files.length === 0) return;
-
                 addLog(`Processing ${files.length} image(s)...`, 'info');
-
                 Array.from(files).forEach(file => {
                     let newItem = { id: generateId(), tierId: null };
                     const reader = new FileReader();
@@ -534,23 +595,12 @@
                             const maxHeight = itemHeight * 2;
                             let width = img.width;
                             let height = img.height;
-
-                            if (width > height) {
-                                if (width > maxWidth) {
-                                    height *= maxWidth / width;
-                                    width = maxWidth;
-                                }
-                            } else {
-                                if (height > maxHeight) {
-                                    width *= maxHeight / height;
-                                    height = maxHeight;
-                                }
-                            }
+                            if (width > height) { if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; } }
+                            else { if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; } }
                             canvas.width = width;
                             canvas.height = height;
                             const ctx = canvas.getContext('2d');
                             ctx.drawImage(img, 0, 0, width, height);
-
                             newItem.type = 'image';
                             newItem.value = canvas.toDataURL('image/jpeg', 0.8);
                             setItems(p => [...p, newItem]);
@@ -560,12 +610,8 @@
                     reader.onerror = () => addLog(`Error reading file: ${file.name}`, "error");
                     reader.readAsDataURL(file);
                 });
-
                 addLog(`Added ${files.length} items from files.`, 'action');
-
-                if (newItemImageFileRef.current) {
-                    newItemImageFileRef.current.value = '';
-                }
+                if (newItemImageFileRef.current) newItemImageFileRef.current.value = '';
             };
 
             const handleAddTier = () => {
@@ -582,23 +628,12 @@
                             const maxHeight = itemHeight * 2;
                             let width = img.width;
                             let height = img.height;
-
-                            if (width > height) {
-                                if (width > maxWidth) {
-                                    height *= maxWidth / width;
-                                    width = maxWidth;
-                                }
-                            } else {
-                                if (height > maxHeight) {
-                                    width *= maxHeight / height;
-                                    height = maxHeight;
-                                }
-                            }
+                            if (width > height) { if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; } }
+                            else { if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; } }
                             canvas.width = width;
                             canvas.height = height;
                             const ctx = canvas.getContext('2d');
                             ctx.drawImage(img, 0, 0, width, height);
-
                             newTier.type = 'image';
                             newTier.value = canvas.toDataURL('image/jpeg', 0.8);
                             setTiers(p => [...p, newTier]);
@@ -615,12 +650,7 @@
             const handleAddItem = () => {
                 const name = newItemNameRef.current.value.trim();
                 const url = newItemImageUrlRef.current.value.trim();
-
-                if (!name && !url) {
-                    addLog("Item name or URL required.", "warning");
-                    return;
-                }
-
+                if (!name && !url) { addLog("Item name or URL required.", "warning"); return; }
                 let newItem = { id: generateId(), tierId: null };
                 if (url) {
                     if (!url.startsWith('http')) { addLog("Invalid item URL.", "error"); return; }
@@ -628,7 +658,6 @@
                 } else {
                     newItem.type = 'name'; newItem.value = name; setItems(p => [...p, newItem]); addLog(`Added text item: ${name}`, "info");
                 }
-
                 newItemNameRef.current.value = '';
                 if (newItemImageUrlRef.current) newItemImageUrlRef.current.value = '';
             };
@@ -664,27 +693,12 @@
                         const img = new Image();
                         img.onload = () => {
                             const canvas = document.createElement('canvas');
-                            const maxWidth = itemWidth * 2;
-                            const maxHeight = itemHeight * 2;
-                            let width = img.width;
-                            let height = img.height;
-
-                            if (width > height) {
-                                if (width > maxWidth) {
-                                    height *= maxWidth / width;
-                                    width = maxWidth;
-                                }
-                            } else {
-                                if (height > maxHeight) {
-                                    width *= maxHeight / height;
-                                    height = maxHeight;
-                                }
-                            }
-                            canvas.width = width;
-                            canvas.height = height;
+                            const maxWidth = itemWidth * 2; const maxHeight = itemHeight * 2;
+                            let width = img.width; let height = img.height;
+                            if (width > height) { if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; } } else { if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; } }
+                            canvas.width = width; canvas.height = height;
                             const ctx = canvas.getContext('2d');
                             ctx.drawImage(img, 0, 0, width, height);
-                            
                             save(canvas.toDataURL('image/jpeg', 0.8), 'image', editingTierColor);
                         };
                         img.src = reader.result;
@@ -700,6 +714,33 @@
             };
 
             const cancelEditingTier = () => { setEditingTierId(null); setEditingTierLabel(''); setEditingTierColor('#888888'); setEditingTierImageUrl(''); setEditingTierImageFile(null); if(editTierImageFileRef.current) editTierImageFileRef.current.value=''; if(editTierImageUrlRef.current) editTierImageUrlRef.current.value=''; addLog("Edit tier cancelled.", "info"); };
+
+            // --- DRAG & DROP + A11Y HANDLERS ---
+
+            const moveItem = useCallback((itemId, targetTierId, beforeItemId = null) => {
+                const itemToMove = items.find(i => i.id === itemId);
+                if (!itemToMove) return;
+
+                const fromTierName = itemToMove.tierId ? tiers.find(t => t.id === itemToMove.tierId)?.value : itemPoolTitle;
+                const toTierName = targetTierId ? tiers.find(t => t.id === targetTierId)?.value : itemPoolTitle;
+                setAnnouncement(`Moved item from ${fromTierName} to ${toTierName}.`);
+                lastManuallySelectedId.current = itemId;
+
+                setItems(prev => prev.map(i => i.id === itemId ? { ...i, tierId: targetTierId } : i));
+                setTiers(prev => {
+                    let newTiers = prev.map(t => ({ ...t, items: t.items.filter(id => id !== itemId) }));
+                    if (targetTierId) {
+                        newTiers = newTiers.map(t => {
+                            if (t.id === targetTierId) {
+                                let newItemsInTier = [...t.items];
+                                const idx = beforeItemId ? newItemsInTier.indexOf(beforeItemId) : -1;
+                                if (idx !== -1) newItemsInTier.splice(idx, 0, itemId); else newItemsInTier.push(itemId);
+                                return { ...t, items: newItemsInTier };
+                            } return t;
+                        });
+                    } return newTiers;
+                });
+            }, [items, tiers, itemPoolTitle]);
 
             const cleanupDragStates = () => { setDraggedItemId(null); setDraggedTierId(null); setDraggedOverItemId(null); setDraggedOverTierRowId(null); setDraggedOverTierAreaId(null); };
             const handleItemDragStart = (e, itemId) => { setDraggedItemId(itemId); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', itemId); };
@@ -717,23 +758,7 @@
                 e.preventDefault(); e.stopPropagation();
                 const droppedItemId = draggedItemId || e.dataTransfer.getData('text/plain');
                 if (!droppedItemId || draggedTierId) { cleanupDragStates(); return; }
-                const itemToMove = items.find(i => i.id === droppedItemId);
-                if (!itemToMove) { cleanupDragStates(); return; }
-                
-                setItems(prev => prev.map(i => i.id === droppedItemId ? { ...i, tierId: targetTierId } : i));
-                setTiers(prev => {
-                    let newTiers = prev.map(t => t.id === itemToMove.tierId ? { ...t, items: t.items.filter(id => id !== droppedItemId) } : t);
-                    if (targetTierId) {
-                        newTiers = newTiers.map(t => {
-                            if (t.id === targetTierId) {
-                                let newItemsInTier = t.items.filter(id => id !== droppedItemId);
-                                const idx = beforeItemId ? newItemsInTier.indexOf(beforeItemId) : -1;
-                                if (idx !== -1) newItemsInTier.splice(idx, 0, droppedItemId); else newItemsInTier.push(droppedItemId);
-                                return { ...t, items: newItemsInTier };
-                            } return t;
-                        });
-                    } return newTiers;
-                });
+                moveItem(droppedItemId, targetTierId, beforeItemId);
                 cleanupDragStates();
             };
 
@@ -750,7 +775,171 @@
                 });
                 cleanupDragStates();
             };
-            
+
+            const handleItemClick = useCallback((itemId) => {
+                if (finalizeMode) return;
+                if (selectedItemId === itemId) {
+                    setSelectedItemId(null);
+                    setSelectedItemOriginTierId(null);
+                    setAnnouncement(`Item deselected.`);
+                } else {
+                    const item = items.find(i => i.id === itemId);
+                    setSelectedItemId(itemId);
+                    setSelectedItemOriginTierId(item.tierId);
+                    setSelectedTierId(null);
+                    setAnnouncement(`Item ${item.value || 'image'} selected. Use arrow keys to move, or Escape to deselect.`);
+                }
+            }, [selectedItemId, items, finalizeMode]);
+
+            const handleTierClick = useCallback((tierId) => {
+                if (finalizeMode) return;
+                if (selectedTierId === tierId) {
+                    setSelectedTierId(null);
+                    setAnnouncement(`Tier deselected.`);
+                } else {
+                    setSelectedTierId(tierId);
+                    setSelectedItemId(null);
+                    const tier = tiers.find(t => t.id === tierId);
+                    setAnnouncement(`Tier ${tier.value} selected. Use arrow keys to reorder, or Escape to deselect.`);
+                }
+            }, [selectedTierId, tiers, finalizeMode]);
+
+            const handleItemKeyDown = useCallback((e, itemId) => {
+                const item = items.find(i => i.id === itemId);
+                if (!item) return;
+                const currentTierId = item.tierId;
+
+                if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    handleItemClick(itemId);
+                }
+
+                if (e.key === 'Escape') {
+                    if (selectedItemId === itemId) {
+                        const wasFromPool = selectedItemOriginTierId === null;
+                        let nextSelectedItemId = null;
+
+                        if (autoSelectNext && wasFromPool) {
+                            const unassignedItems = items.filter(item => item.tierId === null);
+                            const currentItemInPoolIndex = unassignedItems.findIndex(i => i.id === itemId);
+
+                            if (unassignedItems.length > 0 && currentItemInPoolIndex < unassignedItems.length -1) {
+                                const nextItem = unassignedItems[currentItemInPoolIndex + 1];
+                                nextSelectedItemId = nextItem.id;
+                                setAnnouncement(`Auto-selected next item from pool: ${nextItem.value || 'image'}.`);
+                            } else {
+                                 setAnnouncement(`Selection cancelled. Last item in pool.`);
+                            }
+                        } else {
+                            setAnnouncement(`Selection cancelled.`);
+                        }
+
+                        handleItemClick(nextSelectedItemId);
+                    }
+                }
+
+                if (selectedItemId && selectedItemId === itemId) {
+                    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        const tierIds = [null, ...tiers.map(t => t.id)];
+                        const currentTierIndex = tierIds.indexOf(currentTierId);
+                        let nextTierIndex;
+
+                        if (e.key === 'ArrowUp') {
+                            nextTierIndex = currentTierIndex > 0 ? currentTierIndex - 1 : tierIds.length - 1;
+                        } else {
+                            nextTierIndex = currentTierIndex < tierIds.length - 1 ? currentTierIndex + 1 : 0;
+                        }
+
+                        const nextTierId = tierIds[nextTierIndex];
+                        moveItem(itemId, nextTierId);
+                    }
+
+                    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                         e.preventDefault();
+                         setTiers(prevTiers => prevTiers.map(tier => {
+                             if (tier.id === currentTierId) {
+                                 const itemIndex = tier.items.indexOf(itemId);
+                                 if (itemIndex === -1) return tier;
+                                 const newItems = [...tier.items];
+                                 const newIndex = e.key === 'ArrowLeft' ? Math.max(0, itemIndex - 1) : Math.min(newItems.length - 1, itemIndex + 1);
+                                 if (newIndex !== itemIndex) {
+                                    [newItems[itemIndex], newItems[newIndex]] = [newItems[newIndex], newItems[itemIndex]];
+                                    const movedDirection = e.key === 'ArrowLeft' ? 'left' : 'right';
+                                    setAnnouncement(`Item moved ${movedDirection}.`);
+                                    lastManuallySelectedId.current = itemId;
+                                 }
+                                 return { ...tier, items: newItems };
+                             }
+                             return tier;
+                         }));
+                    }
+                }
+            }, [selectedItemId, items, tiers, moveItem, autoSelectNext, selectedItemOriginTierId, handleItemClick]);
+
+            const handleTierKeyDown = useCallback((e, tierId) => {
+                if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    handleTierClick(tierId);
+                }
+
+                if (e.key === 'Escape') {
+                    if (selectedTierId) {
+                        setSelectedTierId(null);
+                        setAnnouncement(`Selection cancelled.`);
+                    }
+                }
+
+                if (selectedTierId && selectedTierId === tierId) {
+                    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        setTiers(prev => {
+                            const tierIndex = prev.findIndex(t => t.id === tierId);
+                            if (tierIndex === -1) return prev;
+                            const newIndex = e.key === 'ArrowUp' ? Math.max(0, tierIndex - 1) : Math.min(prev.length - 1, tierIndex + 1);
+                            if (newIndex !== tierIndex) {
+                                const newTiers = [...prev];
+                                const [movedTier] = newTiers.splice(tierIndex, 1);
+                                newTiers.splice(newIndex, 0, movedTier);
+                                setAnnouncement(`Tier moved ${e.key === 'ArrowUp' ? 'up' : 'down'}.`);
+                                lastMovedTierId.current = tierId;
+                                return newTiers;
+                            }
+                            return prev;
+                        });
+                    }
+                }
+            }, [selectedTierId, handleTierClick]);
+
+            // Focus management for keyboard moves AND selections
+            useEffect(() => {
+                if (lastManuallySelectedId.current) {
+                    const itemElement = document.getElementById(`item-${lastManuallySelectedId.current}`);
+                    if (itemElement) {
+                        itemElement.focus();
+                    }
+                    lastManuallySelectedId.current = null;
+                }
+                if (lastMovedTierId.current) {
+                    const tierElement = document.getElementById(`tier-label-${lastMovedTierId.current}`);
+                    if (tierElement) {
+                        tierElement.focus();
+                    }
+                    lastMovedTierId.current = null;
+                }
+            }, [items, tiers]);
+
+             useEffect(() => {
+                if (selectedItemId && document.activeElement?.id !== `item-${selectedItemId}`) {
+                    const itemElement = document.getElementById(`item-${selectedItemId}`);
+                    if (itemElement) {
+                        itemElement.focus();
+                    }
+                }
+            }, [selectedItemId]);
+
+
+            // --- RESIZE HANDLERS ---
             const handleResizeMouseDown = (e) => {
                 e.preventDefault(); setIsResizing(true);
                 resizeDragStartRef.current = { x: e.clientX, width: appContainerRef.current ? appContainerRef.current.offsetWidth : containerWidth };
@@ -794,10 +983,10 @@
                 sectionBg: darkMode ? 'bg-gray-800' : 'bg-gray-50', 
             };
             
-            const dragState = { draggedItemId, draggedTierId, draggedOverItemId, draggedOverTierRowId, draggedOverTierAreaId };
+            const dragState = { draggedItemId, draggedTierId, draggedOverItemId, draggedOverTierRowId, draggedOverTierAreaId, selectedItemId, selectedTierId };
             const itemProps = { itemWidth, itemHeight, tierLabelWidth };
             const itemSetters = { setItemWidth, setItemHeight, setTierLabelWidth };
-            const allHandlers = { handleItemDragStart, handleItemDragEnter, handleItemDragOver, handleItemDragLeave, handleItemDrop, handleTierAreaDragEnter, handleTierAreaDragOver, handleTierAreaDragLeave, handleTierLabelDragStart, handleTierRowDragOver, handleTierRowDragLeave, handleTierDrop, handleDeleteItem, handleDeleteTier, startEditingTier, cleanupDragStates, addLog, handleAddTier, handleAddItem, handlePasteItems, handleResetAllItemsToPool, handleSaveEditedTier, cancelEditingTier, handleExportState, handleImportState, handleItemImageUpload };
+            const allHandlers = { handleItemDragStart, handleItemDragEnter, handleItemDragOver, handleItemDragLeave, handleItemDrop, handleTierAreaDragEnter, handleTierAreaDragOver, handleTierAreaDragLeave, handleTierLabelDragStart, handleTierRowDragOver, handleTierRowDragLeave, handleTierDrop, handleDeleteItem, handleDeleteTier, startEditingTier, cleanupDragStates, addLog, handleAddTier, handleAddItem, handlePasteItems, handleResetAllItemsToPool, handleSaveEditedTier, cancelEditingTier, handleExportState, handleImportState, handleItemImageUpload, handleItemKeyDown, handleTierKeyDown, handleItemClick, handleTierClick };
             const uiState = { showConfiguration, editingTierId, showLogs };
             const uiSetters = { setShowConfiguration, setShowLogs };
             const data = { logs, standardColors };
@@ -807,21 +996,31 @@
 
             return (
                 <div className={`min-h-screen font-sans p-0 transition-colors duration-300 ${theme.bg} ${theme.text}`}>
+                    <div
+                        aria-live="assertive"
+                        style={{
+                            position: 'absolute', width: '1px', height: '1px',
+                            padding: '0', margin: '-1px', overflow: 'hidden',
+                            clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: '0',
+                        }}
+                    >
+                        {announcement}
+                    </div>
                     <div ref={appContainerRef} className="relative mx-auto flex flex-col min-h-screen max-w-full" style={{ width: `${containerWidth}px` }}>
                         <div className={`flex justify-between items-center p-4 ${theme.containerBg}`}>
-                            <input type="text" value={tierListTitle} onChange={(e) => setTierListTitle(e.target.value)} className={`text-3xl sm:text-4xl font-extrabold bg-transparent border-none focus:outline-none focus:ring-0 text-left w-full mr-4 ${theme.text}`} />
+                            <input type="text" value={tierListTitle} onChange={(e) => setTierListTitle(e.target.value)} className={`text-3xl sm:text-4xl font-extrabold bg-transparent border-none focus:outline-none focus:ring-0 text-left w-full mr-4 ${theme.text}`} aria-label="Tier list title"/>
                             <div className="flex items-center gap-2 flex-shrink-0">
                                 <button onClick={() => setFinalizeMode(!finalizeMode)} className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`}>
                                     {finalizeMode ? 'Edit' : 'Finalize'}
                                 </button>
                                 {!finalizeMode && <>
-                                    <button onClick={() => setContainerWidth(window.innerWidth)} className={`w-10 h-10 flex items-center justify-center rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`}>
+                                    <button onClick={() => setContainerWidth(window.innerWidth)} className={`w-10 h-10 flex items-center justify-center rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`} aria-label="Fit to screen width">
                                         Fit
                                     </button>
-                                    <button onClick={toggleFullScreen} className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`}>
+                                    <button onClick={toggleFullScreen} className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`} aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}>
                                         {isFullscreen ? <MinimizeIcon size={24} /> : <MaximizeIcon size={24} />}
                                     </button>
-                                    <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`}>
+                                    <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'} shadow-md`} aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}>
                                         {darkMode ? <SunIcon size={24} /> : <MoonIcon size={24} />}
                                     </button>
                                 </>}
@@ -831,10 +1030,20 @@
                         <div className="flex flex-col gap-0 flex-grow">
                             <div className={`${theme.containerBg} w-full`}>
                                 {tiers.map((tier, index) => (
-                                    <TierRow key={tier.id} tier={tier} items={items} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} index={index} deleteMode={deleteMode} finalizeMode={finalizeMode} />
+                                    <TierRow key={tier.id} tier={tier} items={items} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} index={index} deleteMode={deleteMode} finalizeMode={finalizeMode} selectedTierId={selectedTierId} />
                                 ))}
                             </div>
-                            <ItemPool items={items} itemPoolTitle={itemPoolTitle} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} deleteMode={deleteMode} finalizeMode={finalizeMode} />
+                            <ItemPool
+                                items={items}
+                                itemPoolTitle={itemPoolTitle}
+                                setItemPoolTitle={setItemPoolTitle}
+                                theme={theme}
+                                dragState={dragState}
+                                handlers={allHandlers}
+                                itemProps={itemProps}
+                                deleteMode={deleteMode}
+                                finalizeMode={finalizeMode}
+                            />
                         </div>
                         
                         {!finalizeMode && <ConfigurationPanel 
@@ -850,6 +1059,8 @@
                             itemSetters={itemSetters}
                             deleteMode={deleteMode}
                             setDeleteMode={setDeleteMode}
+                            autoSelectNext={autoSelectNext}
+                            setAutoSelectNext={setAutoSelectNext}
                         />}
 
                         <div className="resize-handle" onMouseDown={handleResizeMouseDown}><div className="resize-handle-visual"></div></div>
