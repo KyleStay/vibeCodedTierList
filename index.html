@@ -352,11 +352,64 @@
             );
         };
 
+        const OpenTierListModal = ({ theme, onClose, addLog }) => {
+            const [savedLists, setSavedLists] = useState([]);
+
+            useEffect(() => {
+                const lists = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key.startsWith('tierListMakerState_')) {
+                        try {
+                            const data = JSON.parse(localStorage.getItem(key));
+                            const id = key.replace('tierListMakerState_', '');
+                            lists.push({ id, title: data.tierListTitle || 'Untitled Tier List' });
+                        } catch (e) {
+                            console.error(`Could not parse saved tier list: ${key}`, e);
+                        }
+                    }
+                }
+                setSavedLists(lists);
+            }, []);
+
+            const handleDelete = (idToDelete) => {
+                localStorage.removeItem(`tierListMakerState_${idToDelete}`);
+                setSavedLists(prev => prev.filter(list => list.id !== idToDelete));
+                addLog(`Deleted saved tier list.`, 'action');
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50" role="dialog" aria-modal="true" aria-labelledby="open-modal-title">
+                    <div className={`relative w-full max-w-lg p-6 rounded-sm shadow-xl ${theme.containerBg}`} onClick={(e) => e.stopPropagation()}>
+                        <button onClick={onClose} className={`absolute top-4 right-4 p-2 rounded-full ${theme.darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`} aria-label="Close">
+                            <XIcon size={24} className={theme.text} />
+                        </button>
+                        <h2 id="open-modal-title" className={`text-2xl font-bold mb-4 ${theme.text}`}>Open Saved Tier List</h2>
+                        <div className="space-y-2 max-h-96 overflow-y-auto">
+                            {savedLists.length > 0 ? savedLists.map(list => (
+                                <div key={list.id} className={`flex justify-between items-center p-3 rounded ${theme.sectionBg} border ${theme.borderColor}`}>
+                                    <a href={`${window.location.pathname}?id=${list.id}`} target="_blank" rel="noopener noreferrer" className={`font-medium hover:underline ${theme.darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                                        {list.title}
+                                    </a>
+                                    <button onClick={() => handleDelete(list.id)} className="p-1 text-red-500 hover:text-red-700 rounded-full" aria-label={`Delete ${list.title}`}>
+                                        <Trash2Icon size={18} />
+                                    </button>
+                                </div>
+                            )) : (
+                                <p className={theme.inputText}>No saved tier lists found.</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+
         const ConfigurationPanel = ({ theme, uiState, uiSetters, data, dataHandlers, editState, editSetters, refs, itemProps, itemSetters, deleteMode, setDeleteMode, setContainerWidth, toggleFullScreen, setDarkMode, isFullscreen, darkMode }) => {
             const { showConfiguration, editingTierId, showLogs } = uiState;
             const { setShowConfiguration, setShowLogs, handleSelectFirstItemInPool } = uiSetters;
             const { logs, standardColors } = data;
-            const { handleAddTier, handleAddItem, handlePasteItems, handleSaveEditedTier, cancelEditingTier, addLog, handleExportImage, handleClearAllData, handleNewTierList } = dataHandlers;
+            const { handleAddTier, handleAddItem, handlePasteItems, handleSaveEditedTier, cancelEditingTier, addLog, handleExportImage, handleClearAllData, handleNewTierList, handleOpenTierList } = dataHandlers;
             const { editingTierLabel, editingTierColor, newTierColor } = editState;
             const { setEditingTierLabel, setEditingTierColor, setNewTierColor } = editSetters;
             const { newTierNameRef, newItemNameRef, newItemImageFileRef, newItemImageUrlRef, pasteItemsRef, importFileRef, logDisplayRef } = refs;
@@ -550,12 +603,18 @@
                                     <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-cyan-300':'text-cyan-600'} mb-2 flex items-center gap-2`}>
                                         <DownloadIcon size={20}/> Data Management
                                     </h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                         <button
                                             onClick={handleNewTierList}
                                             className={`flex-1 py-2 ${theme.darkMode?'bg-green-600 hover:bg-green-700':'bg-green-500 hover:bg-green-600'} ${theme.buttonText} rounded-sm flex items-center justify-center gap-2`}
                                         >
                                             <FilePlusIcon size={20} /> New
+                                        </button>
+                                        <button
+                                            onClick={dataHandlers.handleOpenTierList}
+                                            className={`flex-1 py-2 ${theme.darkMode?'bg-yellow-600 hover:bg-yellow-700':'bg-yellow-500 hover:bg-yellow-600'} ${theme.buttonText} rounded-sm flex items-center justify-center gap-2`}
+                                        >
+                                            <FolderOpenIcon size={20} /> Open
                                         </button>
                                         <input
                                             type="file"
@@ -575,8 +634,6 @@
                                         >
                                             <DownloadIcon size={20} /> Export
                                         </button>
-                                    </div>
-                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                                         <button
                                             onClick={dataHandlers.handleExportAllStates}
                                             className={`flex-1 py-2 ${theme.darkMode?'bg-blue-600 hover:bg-blue-700':'bg-blue-500 hover:bg-blue-600'} ${theme.buttonText} rounded-sm flex items-center justify-center gap-2`}
@@ -677,6 +734,7 @@
             const [logs, setLogs] = useState([]);
             const [announcement, setAnnouncement] = useState("");
             const [showClearDataModal, setShowClearDataModal] = useState(false);
+            const [showOpenModal, setShowOpenModal] = useState(false);
             const addLog = useCallback((message, type = 'info') => setLogs(prev => [{ message, type, timestamp: new Date().toLocaleTimeString() }, ...prev].slice(0, 100)), []);
 
             const [tiers, setTiers] = useState(initialState.tiers);
@@ -1037,6 +1095,10 @@
                 window.open(window.location.origin + window.location.pathname, '_blank');
             };
 
+            const handleOpenTierList = () => {
+                setShowOpenModal(true);
+            };
+
             const handleClearAllData = () => {
                 setShowClearDataModal(true);
             };
@@ -1344,7 +1406,7 @@
             const dragState = { draggedItemId, draggedTierId, draggedOverItemId, draggedOverTierRowId, draggedOverTierAreaId, selectedItemId, selectedTierId };
             const itemProps = { itemWidth, itemHeight, tierLabelWidth };
             const itemSetters = { setItemWidth, setItemHeight, setTierLabelWidth };
-            const allHandlers = { handleItemDragStart, handleItemDragEnter, handleItemDragOver, handleItemDragLeave, handleItemDrop, handleTierAreaDragEnter, handleTierAreaDragOver, handleTierAreaDragLeave, handleTierLabelDragStart, handleTierRowDragOver, handleTierRowDragLeave, handleTierDrop, handleDeleteItem, handleDeleteTier, startEditingTier, cleanupDragStates, addLog, handleAddTier, handleAddItem, handlePasteItems, handleResetAllItemsToPool, handleSaveEditedTier, cancelEditingTier, handleExportState, handleImportState, handleItemImageUpload, handleExportImage, handleItemClick, handleTierClick, handleClearAllData, handleNewTierList, handleExportAllStates };
+            const allHandlers = { handleItemDragStart, handleItemDragEnter, handleItemDragOver, handleItemDragLeave, handleItemDrop, handleTierAreaDragEnter, handleTierAreaDragOver, handleTierAreaDragLeave, handleTierLabelDragStart, handleTierRowDragOver, handleTierRowDragLeave, handleTierDrop, handleDeleteItem, handleDeleteTier, startEditingTier, cleanupDragStates, addLog, handleAddTier, handleAddItem, handlePasteItems, handleResetAllItemsToPool, handleSaveEditedTier, cancelEditingTier, handleExportState, handleImportState, handleItemImageUpload, handleExportImage, handleItemClick, handleTierClick, handleClearAllData, handleNewTierList, handleExportAllStates, handleOpenTierList };
             const uiState = { showConfiguration, editingTierId, showLogs };
             const uiSetters = { setShowConfiguration, setShowLogs, handleSelectFirstItemInPool };
             const data = { logs, standardColors };
@@ -1358,6 +1420,7 @@
                 <div className={`min-h-screen font-sans transition-colors duration-300 ${theme.bg} ${theme.text}`}>
                     {showCommandsPopover && <CommandsPopover theme={theme} onClose={() => setShowCommandsPopover(false)} />}
                     {showClearDataModal && <ConfirmationModal theme={theme} onConfirm={confirmClearAllData} onCancel={() => setShowClearDataModal(false)} title="Clear All Data?" message="This will permanently delete all tiers and items from your browser's storage and cannot be undone."/>}
+                    {showOpenModal && <OpenTierListModal theme={theme} onClose={() => setShowOpenModal(false)} addLog={addLog} />}
                     <div aria-live="assertive" style={{ position: 'absolute', width: '1px', height: '1px', padding: '0', margin: '-1px', overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: '0' }}>{announcement}</div>
                     
                     <div ref={appContainerRef} className="mx-auto max-w-full flex flex-col gap-1 p-1">
