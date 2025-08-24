@@ -151,6 +151,16 @@
 
         // --- UI COMPONENTS ---
 
+        const DropZone = ({ onClick, itemHeight }) => (
+            <div
+                onClick={onClick}
+                className="flex-shrink-0 w-4 rounded bg-indigo-500/20 hover:bg-indigo-500/40 cursor-pointer transition-colors flex items-center justify-center"
+                style={{ height: `${itemHeight}px` }}
+            >
+                <div className="w-1 h-1/3 bg-indigo-400 rounded-full"></div>
+            </div>
+        );
+
         const DraggableItem = memo(({ item, itemWidth, itemHeight, theme, draggedItemId, draggedOverItemId, handlers, addLog, deleteMode, selectedItemId, mobileSelectedItem }) => (
             <div
                 id={`item-${item.id}`}
@@ -159,7 +169,7 @@
                 aria-pressed={selectedItemId === item.id}
                 aria-label={`Item: ${item.value || 'image'}. ${item.tierId ? `In tier ${item.tierId}` : 'In item pool'}. Press Space or Enter to select.`}
                 draggable={true}
-                onClick={() => handlers.handleItemClick(item.id, item.tierId)}
+                onClick={() => handlers.handleItemClick(item.id)}
                 onDragStart={(e) => handlers.handleItemDragStart(e, item.id)}
                 onDragEnter={(e) => handlers.handleItemDragEnter(e, item.id, item.tierId)}
                 onDragOver={(e) => handlers.handleItemDragOver(e, item.id, item.tierId)}
@@ -237,7 +247,17 @@
                             ${draggedOverTierAreaId === tier.id && draggedItemId && !draggedOverItemId ? 'drag-over-tier-area' : ''}`}
                         aria-label={`Tier ${tier.value} content area`}
                     >
-                        {tierItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} selectedItemId={selectedItemId} mobileSelectedItem={mobileSelectedItem} />)}
+                        {mobileSelectedItem && (
+                            <DropZone onClick={(e) => { e.stopPropagation(); handlers.handleDropZoneClick(tier.id, tierItems[0]?.id || null); }} itemHeight={itemProps.itemHeight} />
+                        )}
+                        {tierItems.map((item, index) => (
+                            <React.Fragment key={item.id}>
+                                <DraggableItem item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} selectedItemId={selectedItemId} mobileSelectedItem={mobileSelectedItem} />
+                                {mobileSelectedItem && mobileSelectedItem !== item.id && (
+                                     <DropZone onClick={(e) => { e.stopPropagation(); handlers.handleDropZoneClick(tier.id, tierItems[index + 1]?.id || null); }} itemHeight={itemProps.itemHeight} />
+                                )}
+                            </React.Fragment>
+                        ))}
                     </div>
                 </div>
             );
@@ -272,7 +292,17 @@
                         />
                     </div>
                     <div className={`flex flex-wrap gap-2 justify-center sm:justify-start flex-grow ${isSideLayout ? 'overflow-y-auto p-2' : 'min-h-[100px]'}`}>
-                        {unassignedItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} selectedItemId={selectedItemId} mobileSelectedItem={mobileSelectedItem} />)}
+                        {mobileSelectedItem && (
+                            <DropZone onClick={(e) => { e.stopPropagation(); handlers.handleDropZoneClick(null, unassignedItems[0]?.id || null); }} itemHeight={itemProps.itemHeight} />
+                        )}
+                        {unassignedItems.map((item, index) => (
+                             <React.Fragment key={item.id}>
+                                <DraggableItem item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} selectedItemId={selectedItemId} mobileSelectedItem={mobileSelectedItem} />
+                                {mobileSelectedItem && mobileSelectedItem !== item.id &&(
+                                     <DropZone onClick={(e) => { e.stopPropagation(); handlers.handleDropZoneClick(null, unassignedItems[index + 1]?.id || null); }} itemHeight={itemProps.itemHeight} />
+                                )}
+                            </React.Fragment>
+                        ))}
                     </div>
                     <div className="absolute bottom-4 right-4 flex gap-2">
                          { window.innerWidth >= 1280 && 
@@ -1190,22 +1220,22 @@
             };
 
             // --- TAP-TO-MOVE HANDLERS ---
-            const handleItemClick = (itemId, tierId) => {
-                if (mobileSelectedItem) {
-                    if (mobileSelectedItem === itemId) {
-                        // Tapped the same item again, so deselect it
-                        setMobileSelectedItem(null);
+            const handleItemClick = (itemId) => {
+                setMobileSelectedItem(prev => {
+                    if (prev === itemId) {
                         addLog(`Item deselected for move.`, 'event');
-                    } else {
-                        // Tapped a different item, so place the selected item before it
-                        moveItem(mobileSelectedItem, tierId, itemId);
-                        setMobileSelectedItem(null);
-                        addLog(`Item moved.`, 'event');
+                        return null; // Deselect if tapping the same item
                     }
-                } else {
-                    // No item selected, so select this one for moving
-                    setMobileSelectedItem(itemId);
-                    addLog(`Item selected for move. Tap a tier or another item to place it.`, 'event');
+                    addLog(`Item selected for move. Tap a space to place it.`, 'event');
+                    return itemId; // Select new item
+                });
+            };
+
+            const handleDropZoneClick = (targetTierId, beforeItemId) => {
+                if (mobileSelectedItem) {
+                    moveItem(mobileSelectedItem, targetTierId, beforeItemId);
+                    setMobileSelectedItem(null);
+                    addLog(`Item moved.`, 'event');
                 }
             };
 
@@ -1456,7 +1486,7 @@
             const dragState = { draggedItemId, draggedTierId, draggedOverItemId, draggedOverTierRowId, draggedOverTierAreaId, selectedItemId, selectedTierId, mobileSelectedItem };
             const itemProps = { itemWidth, itemHeight, tierLabelWidth };
             const itemSetters = { setItemWidth, setItemHeight, setTierLabelWidth };
-            const allHandlers = { handleItemDragStart, handleItemDragEnter, handleItemDragOver, handleItemDragLeave, handleItemDrop, handleTierAreaDragEnter, handleTierAreaDragOver, handleTierAreaDragLeave, handleTierLabelDragStart, handleTierRowDragOver, handleTierRowDragLeave, handleTierDrop, handleDeleteItem, handleDeleteTier, startEditingTier, cleanupDragStates, addLog, handleAddTier, handleAddItem, handlePasteItems, handleResetAllItemsToPool, handleSaveEditedTier, cancelEditingTier, handleExportState, handleImportState, handleItemImageUpload, handleExportImage, handleItemClick, handleTierClick, handleKeyboardSelection, handleClearAllData, handleNewTierList, handleExportAllStates, handleOpenTierList, handleTierAreaClick };
+            const allHandlers = { handleItemDragStart, handleItemDragEnter, handleItemDragOver, handleItemDragLeave, handleItemDrop, handleTierAreaDragEnter, handleTierAreaDragOver, handleTierAreaDragLeave, handleTierLabelDragStart, handleTierRowDragOver, handleTierRowDragLeave, handleTierDrop, handleDeleteItem, handleDeleteTier, startEditingTier, cleanupDragStates, addLog, handleAddTier, handleAddItem, handlePasteItems, handleResetAllItemsToPool, handleSaveEditedTier, cancelEditingTier, handleExportState, handleImportState, handleItemImageUpload, handleExportImage, handleItemClick, handleTierClick, handleKeyboardSelection, handleClearAllData, handleNewTierList, handleExportAllStates, handleOpenTierList, handleTierAreaClick, handleDropZoneClick };
             const uiState = { showConfiguration, editingTierId, showLogs };
             const uiSetters = { setShowConfiguration, setShowLogs, handleSelectFirstItemInPool };
             const data = { logs, standardColors };
