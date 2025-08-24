@@ -15,10 +15,11 @@
         body {
             font-family: 'Inter', sans-serif;
             overflow-x: hidden;
-            /* Disable text selection */
+            /* Disable text selection and callout menu on touch */
             -webkit-user-select: none; /* Safari */
             -ms-user-select: none; /* IE 10 and IE 11 */
             user-select: none; /* Standard syntax */
+            -webkit-touch-callout: none; /* iOS Safari */
         }
         /* Custom styles for color input */
         input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
