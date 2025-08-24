@@ -243,7 +243,7 @@
                             aria-label="Item pool title"
                         />
                     </div>
-                    <div className={`flex flex-wrap gap-2 justify-center sm:justify-start flex-grow ${isSideLayout ? 'overflow-y-auto' : 'min-h-[100px]'}`}>
+                    <div className={`flex flex-wrap gap-2 justify-center sm:justify-start flex-grow ${isSideLayout ? 'overflow-y-auto p-2' : 'min-h-[100px]'}`}>
                         {unassignedItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} selectedItemId={selectedItemId} />)}
                     </div>
                     <div className="absolute bottom-4 right-4 flex gap-2">
@@ -390,7 +390,7 @@
             }
 
             return (
-                <div className={`${theme.bg} p-1`}>
+                <div className="flex flex-col gap-1">
                     <div className={`${theme.containerBg} p-4`}>
                         <h2 className={`text-2xl font-bold ${theme.text} mb-4 text-center flex items-center justify-center gap-2`}>
                             <SettingsIcon size={24} /> Configuration
@@ -518,25 +518,27 @@
                                         </div>
                                     </div>
                                 </div>
-                                {/* Logs */}
-                                <div className={`${theme.containerBg} p-0 w-full`}>
-                                    <h3 className={`text-xl font-semibold ${theme.text} mb-3 text-center flex items-center justify-center gap-2`}>
-                                        <FileTextIcon size={20} /> Application Logs
-                                        <button onClick={()=>setShowLogs(!showLogs)} className={`p-1 rounded-full ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`} aria-expanded={showLogs}>{showLogs?<ChevronUpIcon size={18}/>:<ChevronDownIcon size={18}/>}</button>
-                                    </h3>
-                                    {showLogs && (<>
-                                        <div className="flex gap-2 mb-3">
-                                            <button onClick={copyLogsToClipboard} className={`flex-1 py-1.5 px-3 rounded-sm ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>Copy</button>
-                                            <button onClick={selectAllLogs} className={`flex-1 py-1.5 px-3 rounded-sm ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>Select</button>
-                                        </div>
-                                        <div ref={logDisplayRef} className={`log-display-area flex flex-col gap-1 ${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor} max-h-60 overflow-y-auto text-left`}>
-                                            {logs.length === 0 ? <p className={`${theme.darkMode?'text-gray-400':'text-gray-600'} text-sm`}>No logs.</p> : logs.map((l,i)=>(
-                                                <p key={i} className={`text-xs font-mono ${l.type==='error'?(theme.darkMode?'text-red-400':'text-red-600'):l.type==='warning'?(theme.darkMode?'text-yellow-400':'text-yellow-600'):l.type==='action'?(theme.darkMode?'text-blue-300':'text-blue-600'):l.type==='event'?(theme.darkMode?'text-purple-300':'text-purple-600'):(theme.darkMode?'text-gray-300':'text-gray-700')}`}>
-                                                    <span className={`${theme.darkMode?'text-gray-500':'text-gray-400'}`}>{l.timestamp}</span> <span className={`font-bold ${l.type==='error'?(theme.darkMode?'text-red-500':'text-red-700'):l.type==='warning'?(theme.darkMode?'text-yellow-500':'text-yellow-700'):l.type==='action'?(theme.darkMode?'text-blue-400':'text-blue-700'):l.type==='event'?(theme.darkMode?'text-purple-400':'text-purple-700'):(theme.darkMode?'text-gray-400':'text-gray-500')}`}>[{l.type.toUpperCase()}]</span> {l.message}
-                                                </p>
-                                            ))}
-                                        </div></>
-                                    )}
+                                {/* Logs Section */}
+                                <div className="mt-1">
+                                    <div className={`${theme.containerBg} p-4`}>
+                                        <h3 className={`text-xl font-semibold ${theme.text} mb-3 text-center flex items-center justify-center gap-2`}>
+                                            <FileTextIcon size={20} /> Application Logs
+                                            <button onClick={()=>setShowLogs(!showLogs)} className={`p-1 rounded-full ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`} aria-expanded={showLogs}>{showLogs?<ChevronUpIcon size={18}/>:<ChevronDownIcon size={18}/>}</button>
+                                        </h3>
+                                        {showLogs && (<>
+                                            <div className="flex gap-2 mb-3">
+                                                <button onClick={copyLogsToClipboard} className={`flex-1 py-1.5 px-3 rounded-sm ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>Copy</button>
+                                                <button onClick={selectAllLogs} className={`flex-1 py-1.5 px-3 rounded-sm ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>Select</button>
+                                            </div>
+                                            <div ref={logDisplayRef} className={`log-display-area flex flex-col gap-1 ${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor} max-h-60 overflow-y-auto text-left`}>
+                                                {logs.length === 0 ? <p className={`${theme.darkMode?'text-gray-400':'text-gray-600'} text-sm`}>No logs.</p> : logs.map((l,i)=>(
+                                                    <p key={i} className={`text-xs font-mono ${l.type==='error'?(theme.darkMode?'text-red-400':'text-red-600'):l.type==='warning'?(theme.darkMode?'text-yellow-400':'text-yellow-600'):l.type==='action'?(theme.darkMode?'text-blue-300':'text-blue-600'):l.type==='event'?(theme.darkMode?'text-purple-300':'text-purple-600'):(theme.darkMode?'text-gray-300':'text-gray-700')}`}>
+                                                        <span className={`${theme.darkMode?'text-gray-500':'text-gray-400'}`}>{l.timestamp}</span> <span className={`font-bold ${l.type==='error'?(theme.darkMode?'text-red-500':'text-red-700'):l.type==='warning'?(theme.darkMode?'text-yellow-500':'text-yellow-700'):l.type==='action'?(theme.darkMode?'text-blue-400':'text-blue-700'):l.type==='event'?(theme.darkMode?'text-purple-400':'text-purple-700'):(theme.darkMode?'text-gray-400':'text-gray-500')}`}>[{l.type.toUpperCase()}]</span> {l.message}
+                                                    </p>
+                                                ))}
+                                            </div></>
+                                        )}
+                                    </div>
                                 </div>
                             </>
                         )}
@@ -1164,7 +1166,7 @@
                     {showCommandsPopover && <CommandsPopover theme={theme} onClose={() => setShowCommandsPopover(false)} />}
                     <div aria-live="assertive" style={{ position: 'absolute', width: '1px', height: '1px', padding: '0', margin: '-1px', overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: '0' }}>{announcement}</div>
 
-                    <div ref={appContainerRef} className="mx-auto max-w-full flex flex-col gap-1">
+                    <div ref={appContainerRef} className="mx-auto max-w-full flex flex-col gap-1 p-1">
                         <div className={`relative ${theme.containerBg}`}>
                              <button
                                 onClick={() => setShowCommandsPopover(true)}
@@ -1176,7 +1178,7 @@
                             <input type="text" value={tierListTitle} onChange={(e) => setTierListTitle(e.target.value)} className={`text-3xl sm:text-4xl font-extrabold bg-transparent border-none focus:outline-none focus:ring-0 text-center w-full p-4 ${theme.text}`} aria-label="Tier list title"/>
                         </div>
 
-                        <div className={`flex ${isSideLayout ? 'flex-row gap-1' : 'flex-col gap-1'}`}>
+                        <div className={`flex ${isSideLayout ? 'flex-row' : 'flex-col gap-1'}`}>
                             <div
                                 className="tier-list-container"
                                 style={isSideLayout ? { width: `${tierListPanelWidth}%` } : { width: '100%' }}
@@ -1187,7 +1189,7 @@
                                     ))}
                                 </div>
                                 {!isSideLayout && (
-                                    <div className="pt-1">
+                                    <div>
                                         <ItemPool items={items} itemPoolTitle={itemPoolTitle} setItemPoolTitle={setItemPoolTitle} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} deleteMode={deleteMode} poolPosition={poolPosition} onTogglePosition={handleTogglePosition} />
                                     </div>
                                 )}
@@ -1195,7 +1197,7 @@
 
                             {isSideLayout && (
                                 <>
-                                    <div onMouseDown={handleResizeMouseDown} className="w-2 cursor-col-resize flex-shrink-0 bg-gray-500/20 hover:bg-blue-500/50 transition-colors"></div>
+                                    <div onMouseDown={handleResizeMouseDown} className={`w-1 cursor-col-resize flex-shrink-0 ${theme.bg} hover:bg-blue-500/50 transition-colors`}></div>
                                     <div
                                         className="item-pool-container flex-grow"
                                         style={{ width: `${100 - tierListPanelWidth}%` }}
