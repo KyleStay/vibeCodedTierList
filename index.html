@@ -247,7 +247,7 @@
                         {unassignedItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} selectedItemId={selectedItemId} />)}
                     </div>
                     <div className="absolute bottom-4 right-4 flex gap-2">
-                         { window.innerWidth >= 1280 &&
+                         { window.innerWidth >= 1280 && 
                             <button onClick={onTogglePosition} className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center ${theme.darkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-400 hover:bg-gray-500'} ${theme.buttonText}`} aria-label={isSideLayout ? "Move item pool to bottom" : "Move item pool to right"}>
                                 {isSideLayout ? <ArrowDownToLineIcon size={24} /> : <ArrowRightToLineIcon size={24} />}
                             </button>
@@ -257,7 +257,7 @@
                 </div>
             );
         };
-
+        
         const CommandsPopover = ({ theme, onClose }) => {
             useEffect(() => {
                 const handleKeyDown = (e) => {
@@ -282,20 +282,20 @@
             ];
 
             return (
-                <div
-                    className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50"
-                    onClick={onClose}
-                    role="dialog"
-                    aria-modal="true"
+                <div 
+                    className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50" 
+                    onClick={onClose} 
+                    role="dialog" 
+                    aria-modal="true" 
                     aria-labelledby="commands-title"
                 >
-                    <div
+                    <div 
                         className={`relative w-full max-w-lg p-6 rounded-sm shadow-xl ${theme.containerBg}`}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <button
-                            onClick={onClose}
-                            className={`absolute top-4 right-4 p-2 rounded-full ${theme.darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`}
+                        <button 
+                            onClick={onClose} 
+                            className={`absolute top-4 right-4 p-2 rounded-full ${theme.darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`} 
                             aria-label="Close keyboard commands"
                         >
                             <XIcon size={24} className={theme.text} />
@@ -397,49 +397,49 @@
                             <button onClick={handleConfigToggle} className={`p-1 rounded-full ${theme.darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-300 hover:bg-gray-400'}`} aria-expanded={showConfiguration}> {showConfiguration ? <ChevronUpIcon size={20} /> : <ChevronDownIcon size={20} />} </button>
                         </h2>
                         {showConfiguration && (
-                            <>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1">
-                                    {/* General Settings */}
-                                    <div className={`${theme.sectionBg} p-3 rounded-sm md:col-span-2 lg:col-span-3`}>
-                                        <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-purple-300':'text-purple-600'} mb-3 flex items-center gap-2`}> <SettingsIcon size={20}/> General Settings</h3>
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-                                            <button onClick={() => setContainerWidth(window.innerWidth)} className={`w-full py-2 rounded-sm shadow-sm ${theme.buttonSecondaryBg} ${theme.buttonText} flex items-center justify-center gap-2`}>
-                                                Fit to Screen
-                                            </button>
-                                            <button onClick={toggleFullScreen} className={`w-full py-2 rounded-sm shadow-sm ${theme.buttonSecondaryBg} ${theme.buttonText} flex items-center justify-center gap-2`}>
-                                                {isFullscreen ? <MinimizeIcon size={20} /> : <MaximizeIcon size={20} />}
-                                                {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-                                            </button>
-                                            <button onClick={() => setDarkMode(!darkMode)} className={`w-full py-2 rounded-sm shadow-sm ${theme.buttonSecondaryBg} ${theme.buttonText} flex items-center justify-center gap-2`}>
-                                                {darkMode ? <SunIcon size={20} /> : <MoonIcon size={20} />}
-                                                {darkMode ? "Light Mode" : "Dark Mode"}
-                                            </button>
+                            <div className="flex flex-col gap-1">
+                                {/* General Settings */}
+                                <div className={`${theme.sectionBg} p-3 rounded-sm`}>
+                                    <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-purple-300':'text-purple-600'} mb-3 flex items-center gap-2`}> <SettingsIcon size={20}/> General Settings</h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                                        <button onClick={() => setContainerWidth(window.innerWidth)} className={`w-full py-2 rounded-sm shadow-sm ${theme.buttonSecondaryBg} ${theme.buttonText} flex items-center justify-center gap-2`}>
+                                            Fit to Screen
+                                        </button>
+                                        <button onClick={toggleFullScreen} className={`w-full py-2 rounded-sm shadow-sm ${theme.buttonSecondaryBg} ${theme.buttonText} flex items-center justify-center gap-2`}>
+                                            {isFullscreen ? <MinimizeIcon size={20} /> : <MaximizeIcon size={20} />}
+                                            {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                                        </button>
+                                        <button onClick={() => setDarkMode(!darkMode)} className={`w-full py-2 rounded-sm shadow-sm ${theme.buttonSecondaryBg} ${theme.buttonText} flex items-center justify-center gap-2`}>
+                                            {darkMode ? <SunIcon size={20} /> : <MoonIcon size={20} />}
+                                            {darkMode ? "Light Mode" : "Dark Mode"}
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end pt-4 border-t border-gray-200 dark:border-gray-700">
+                                        <div>
+                                            <label htmlFor="tierLabelWidth" className={`block text-sm font-medium ${theme.inputText}`}>Category Width (px)</label>
+                                            <input type="number" id="tierLabelWidth" value={localTierLabelWidth} onChange={e => setLocalTierLabelWidth(e.target.value)} onKeyDown={handleKeyDown} className={`mt-1 p-2 w-full border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
                                         </div>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end pt-4 border-t border-gray-200 dark:border-gray-700">
-                                            <div>
-                                                <label htmlFor="tierLabelWidth" className={`block text-sm font-medium ${theme.inputText}`}>Category Width (px)</label>
-                                                <input type="number" id="tierLabelWidth" value={localTierLabelWidth} onChange={e => setLocalTierLabelWidth(e.target.value)} onKeyDown={handleKeyDown} className={`mt-1 p-2 w-full border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
-                                            </div>
-                                            <div>
-                                                <label htmlFor="itemWidth" className={`block text-sm font-medium ${theme.inputText}`}>Item Width (px)</label>
-                                                <input type="number" id="itemWidth" value={localWidth} onChange={e => setLocalWidth(e.target.value)} onKeyDown={handleKeyDown} className={`mt-1 p-2 w-full border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
-                                            </div>
-                                            <div>
-                                                <label htmlFor="itemHeight" className={`block text-sm font-medium ${theme.inputText}`}>Item Height (px)</label>
-                                                <input type="number" id="itemHeight" value={localHeight} onChange={e => setLocalHeight(e.target.value)} onKeyDown={handleKeyDown} className={`mt-1 p-2 w-full border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
-                                            </div>
-                                            <div className="sm:col-span-2 lg:col-span-3 mt-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                <button onClick={handleSizeUpdate} className={`w-full py-2 rounded-sm shadow-sm ${theme.buttonSecondaryBg} ${theme.buttonText}`}>Update Sizes</button>
-                                                <div className="flex justify-center items-center">
-                                                    <label htmlFor="deleteModeToggle" className={`text-sm font-medium ${theme.inputText} mr-3`}>Delete Mode</label>
-                                                    <div className="relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
-                                                        <input type="checkbox" name="toggle" id="deleteModeToggle" checked={deleteMode} onChange={() => setDeleteMode(!deleteMode)} className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
-                                                        <label htmlFor="deleteModeToggle" className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
-                                                    </div>
+                                        <div>
+                                            <label htmlFor="itemWidth" className={`block text-sm font-medium ${theme.inputText}`}>Item Width (px)</label>
+                                            <input type="number" id="itemWidth" value={localWidth} onChange={e => setLocalWidth(e.target.value)} onKeyDown={handleKeyDown} className={`mt-1 p-2 w-full border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                                        </div>
+                                        <div>
+                                            <label htmlFor="itemHeight" className={`block text-sm font-medium ${theme.inputText}`}>Item Height (px)</label>
+                                            <input type="number" id="itemHeight" value={localHeight} onChange={e => setLocalHeight(e.target.value)} onKeyDown={handleKeyDown} className={`mt-1 p-2 w-full border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                                        </div>
+                                        <div className="sm:col-span-2 lg:col-span-3 mt-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <button onClick={handleSizeUpdate} className={`w-full py-2 rounded-sm shadow-sm ${theme.buttonSecondaryBg} ${theme.buttonText}`}>Update Sizes</button>
+                                            <div className="flex justify-center items-center">
+                                                <label htmlFor="deleteModeToggle" className={`text-sm font-medium ${theme.inputText} mr-3`}>Delete Mode</label>
+                                                <div className="relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
+                                                    <input type="checkbox" name="toggle" id="deleteModeToggle" checked={deleteMode} onChange={() => setDeleteMode(!deleteMode)} className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                                                    <label htmlFor="deleteModeToggle" className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-1">
                                     {/* Edit/Create Tier */}
                                     {editingTierId ? (
                                         <div className={`${theme.sectionBg} p-3 rounded-sm`}>
@@ -485,62 +485,60 @@
                                         <textarea ref={pasteItemsRef} rows="5" placeholder="One per line" className={`w-full p-2 mb-3 border ${theme.borderColor} rounded-sm resize-y ${theme.inputBg} ${theme.inputText}`}></textarea>
                                         <button onClick={handlePasteItems} className={`w-full py-2 ${theme.darkMode?'bg-yellow-600 hover:bg-yellow-700':'bg-yellow-500 hover:bg-yellow-600'} ${theme.buttonText} rounded-sm`}>Add Pasted</button>
                                     </div>
-                                    {/* Data Management */}
-                                    <div className={`${theme.sectionBg} p-3 rounded-sm lg:col-span-3`}>
-                                        <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-cyan-300':'text-cyan-600'} mb-2 flex items-center gap-2`}>
-                                            <DownloadIcon size={20}/> Data Management
-                                        </h3>
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                            <input
-                                                type="file"
-                                                ref={importFileRef}
-                                                onChange={dataHandlers.handleImportState}
-                                                className="hidden"
-                                            />
-                                            <button
-                                                onClick={() => importFileRef.current.click()}
-                                                className={`flex-1 py-2 ${theme.darkMode?'bg-cyan-600 hover:bg-cyan-700':'bg-cyan-500 hover:bg-cyan-600'} ${theme.buttonText} rounded-sm flex items-center justify-center gap-2`}
-                                            >
-                                                <UploadIcon size={20} /> Import
-                                            </button>
-                                            <button
-                                                onClick={dataHandlers.handleExportState}
-                                                className={`flex-1 py-2 ${theme.darkMode?'bg-cyan-600 hover:bg-cyan-700':'bg-cyan-500 hover:bg-cyan-600'} ${theme.buttonText} rounded-sm flex items-center justify-center gap-2`}
-                                            >
-                                                <DownloadIcon size={20} /> Export
-                                            </button>
-                                            <button
-                                                onClick={dataHandlers.handleExportImage}
-                                                className={`flex-1 py-2 ${theme.darkMode?'bg-teal-600 hover:bg-teal-700':'bg-teal-500 hover:bg-teal-600'} ${theme.buttonText} rounded-sm flex items-center justify-center gap-2`}
-                                            >
-                                                <ImageIcon size={20} /> Export Image
-                                            </button>
-                                        </div>
+                                </div>
+                                {/* Data Management */}
+                                <div className={`${theme.sectionBg} p-3 rounded-sm`}>
+                                    <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-cyan-300':'text-cyan-600'} mb-2 flex items-center gap-2`}>
+                                        <DownloadIcon size={20}/> Data Management
+                                    </h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                        <input
+                                            type="file"
+                                            ref={importFileRef}
+                                            onChange={dataHandlers.handleImportState}
+                                            className="hidden"
+                                        />
+                                        <button
+                                            onClick={() => importFileRef.current.click()}
+                                            className={`flex-1 py-2 ${theme.darkMode?'bg-cyan-600 hover:bg-cyan-700':'bg-cyan-500 hover:bg-cyan-600'} ${theme.buttonText} rounded-sm flex items-center justify-center gap-2`}
+                                        >
+                                            <UploadIcon size={20} /> Import
+                                        </button>
+                                        <button
+                                            onClick={dataHandlers.handleExportState}
+                                            className={`flex-1 py-2 ${theme.darkMode?'bg-cyan-600 hover:bg-cyan-700':'bg-cyan-500 hover:bg-cyan-600'} ${theme.buttonText} rounded-sm flex items-center justify-center gap-2`}
+                                        >
+                                            <DownloadIcon size={20} /> Export
+                                        </button>
+                                        <button
+                                            onClick={dataHandlers.handleExportImage}
+                                            className={`flex-1 py-2 ${theme.darkMode?'bg-teal-600 hover:bg-teal-700':'bg-teal-500 hover:bg-teal-600'} ${theme.buttonText} rounded-sm flex items-center justify-center gap-2`}
+                                        >
+                                            <ImageIcon size={20} /> Export Image
+                                        </button>
                                     </div>
                                 </div>
                                 {/* Logs Section */}
-                                <div className="mt-1">
-                                    <div className={`${theme.containerBg} p-4`}>
-                                        <h3 className={`text-xl font-semibold ${theme.text} mb-3 text-center flex items-center justify-center gap-2`}>
-                                            <FileTextIcon size={20} /> Application Logs
-                                            <button onClick={()=>setShowLogs(!showLogs)} className={`p-1 rounded-full ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`} aria-expanded={showLogs}>{showLogs?<ChevronUpIcon size={18}/>:<ChevronDownIcon size={18}/>}</button>
-                                        </h3>
-                                        {showLogs && (<>
-                                            <div className="flex gap-2 mb-3">
-                                                <button onClick={copyLogsToClipboard} className={`flex-1 py-1.5 px-3 rounded-sm ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>Copy</button>
-                                                <button onClick={selectAllLogs} className={`flex-1 py-1.5 px-3 rounded-sm ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>Select</button>
-                                            </div>
-                                            <div ref={logDisplayRef} className={`log-display-area flex flex-col gap-1 ${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor} max-h-60 overflow-y-auto text-left`}>
-                                                {logs.length === 0 ? <p className={`${theme.darkMode?'text-gray-400':'text-gray-600'} text-sm`}>No logs.</p> : logs.map((l,i)=>(
-                                                    <p key={i} className={`text-xs font-mono ${l.type==='error'?(theme.darkMode?'text-red-400':'text-red-600'):l.type==='warning'?(theme.darkMode?'text-yellow-400':'text-yellow-600'):l.type==='action'?(theme.darkMode?'text-blue-300':'text-blue-600'):l.type==='event'?(theme.darkMode?'text-purple-300':'text-purple-600'):(theme.darkMode?'text-gray-300':'text-gray-700')}`}>
-                                                        <span className={`${theme.darkMode?'text-gray-500':'text-gray-400'}`}>{l.timestamp}</span> <span className={`font-bold ${l.type==='error'?(theme.darkMode?'text-red-500':'text-red-700'):l.type==='warning'?(theme.darkMode?'text-yellow-500':'text-yellow-700'):l.type==='action'?(theme.darkMode?'text-blue-400':'text-blue-700'):l.type==='event'?(theme.darkMode?'text-purple-400':'text-purple-700'):(theme.darkMode?'text-gray-400':'text-gray-500')}`}>[{l.type.toUpperCase()}]</span> {l.message}
-                                                    </p>
-                                                ))}
-                                            </div></>
-                                        )}
-                                    </div>
+                                <div className={`${theme.containerBg} p-4`}>
+                                    <h3 className={`text-xl font-semibold ${theme.text} mb-3 text-center flex items-center justify-center gap-2`}>
+                                        <FileTextIcon size={20} /> Application Logs
+                                        <button onClick={()=>setShowLogs(!showLogs)} className={`p-1 rounded-full ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`} aria-expanded={showLogs}>{showLogs?<ChevronUpIcon size={18}/>:<ChevronDownIcon size={18}/>}</button>
+                                    </h3>
+                                    {showLogs && (<>
+                                        <div className="flex gap-2 mb-3">
+                                            <button onClick={copyLogsToClipboard} className={`flex-1 py-1.5 px-3 rounded-sm ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>Copy</button>
+                                            <button onClick={selectAllLogs} className={`flex-1 py-1.5 px-3 rounded-sm ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>Select</button>
+                                        </div>
+                                        <div ref={logDisplayRef} className={`log-display-area flex flex-col gap-1 ${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor} max-h-60 overflow-y-auto text-left`}>
+                                            {logs.length === 0 ? <p className={`${theme.darkMode?'text-gray-400':'text-gray-600'} text-sm`}>No logs.</p> : logs.map((l,i)=>(
+                                                <p key={i} className={`text-xs font-mono ${l.type==='error'?(theme.darkMode?'text-red-400':'text-red-600'):l.type==='warning'?(theme.darkMode?'text-yellow-400':'text-yellow-600'):l.type==='action'?(theme.darkMode?'text-blue-300':'text-blue-600'):l.type==='event'?(theme.darkMode?'text-purple-300':'text-purple-600'):(theme.darkMode?'text-gray-300':'text-gray-700')}`}>
+                                                    <span className={`${theme.darkMode?'text-gray-500':'text-gray-400'}`}>{l.timestamp}</span> <span className={`font-bold ${l.type==='error'?(theme.darkMode?'text-red-500':'text-red-700'):l.type==='warning'?(theme.darkMode?'text-yellow-500':'text-yellow-700'):l.type==='action'?(theme.darkMode?'text-blue-400':'text-blue-700'):l.type==='event'?(theme.darkMode?'text-purple-400':'text-purple-700'):(theme.darkMode?'text-gray-400':'text-gray-500')}`}>[{l.type.toUpperCase()}]</span> {l.message}
+                                                </p>
+                                            ))}
+                                        </div></>
+                                    )}
                                 </div>
-                            </>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -606,7 +604,7 @@
             const importFileRef = useRef(null);
             const logDisplayRef = useRef(null);
             const tierListRef = useRef(null); // Ref for the element to capture
-
+            
             const standardColors = ['#ff7f7f', '#ffbf7f', '#ffff7f', '#bfff7f', '#7fbfff', '#bf7fff', '#c0c0c0', '#404040'];
             
             useEffect(() => { document.documentElement.classList.toggle('dark', darkMode); document.body.style.backgroundColor = darkMode ? '#000000' : '#f3f4f6'; }, [darkMode]);
@@ -635,7 +633,7 @@
                 document.addEventListener('fullscreenchange', handleFullScreenChange);
                 return () => document.removeEventListener('fullscreenchange', handleFullScreenChange);
             }, []);
-
+            
             // Handle responsive layout changes
             useEffect(() => {
                 const handleResize = () => {
@@ -989,7 +987,7 @@
                     if (showCommandsPopover) return;
 
                     if (e.key.toLowerCase() === 'f') { e.preventDefault(); toggleFullScreen(); addLog('Action: Toggled fullscreen with F key', 'action'); return; }
-
+                    
                     if (['n', 'e'].includes(e.key.toLowerCase())) {
                         e.preventDefault();
                         handleSelectNextItemInPool();
@@ -1009,7 +1007,7 @@
                     }
                     if (e.key === 'Escape') {
                         e.preventDefault();
-                        if (selectedItemId) { lastManuallySelectedId.current = selectedItemId; handleItemClick(selectedItemId); }
+                        if (selectedItemId) { lastManuallySelectedId.current = selectedItemId; handleItemClick(selectedItemId); } 
                         else if (selectedTierId) { lastMovedTierId.current = selectedTierId; handleTierClick(selectedTierId); }
                         return;
                     }
@@ -1133,20 +1131,20 @@
                 };
             }, [isResizing]);
 
-            const theme = {
-                darkMode,
-                bg: darkMode ? 'bg-black' : 'bg-gray-100',
-                text: darkMode ? 'text-gray-100' : 'text-gray-900',
-                containerBg: darkMode ? 'bg-gray-800' : 'bg-white',
+            const theme = { 
+                darkMode, 
+                bg: darkMode ? 'bg-black' : 'bg-gray-100', 
+                text: darkMode ? 'text-gray-100' : 'text-gray-900', 
+                containerBg: darkMode ? 'bg-gray-800' : 'bg-white', 
                 itemBg: darkMode ? 'bg-gray-700' : 'bg-gray-50',
-                inputBg: darkMode ? 'bg-gray-700' : 'bg-gray-50',
-                inputText: darkMode ? 'text-gray-200' : 'text-gray-800',
-                placeholderText: darkMode ? 'placeholder-gray-400' : 'placeholder-gray-500',
-                borderColor: darkMode ? 'border-gray-600' : 'border-gray-300',
-                buttonPrimaryBg: darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600',
-                buttonSecondaryBg: darkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-500 hover:bg-gray-600',
-                buttonText: 'text-white',
-                sectionBg: darkMode ? 'bg-gray-800' : 'bg-white',
+                inputBg: darkMode ? 'bg-gray-700' : 'bg-gray-50', 
+                inputText: darkMode ? 'text-gray-200' : 'text-gray-800', 
+                placeholderText: darkMode ? 'placeholder-gray-400' : 'placeholder-gray-500', 
+                borderColor: darkMode ? 'border-gray-600' : 'border-gray-300', 
+                buttonPrimaryBg: darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600', 
+                buttonSecondaryBg: darkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-500 hover:bg-gray-600', 
+                buttonText: 'text-white', 
+                sectionBg: darkMode ? 'bg-gray-800' : 'bg-white', 
             };
             const dragState = { draggedItemId, draggedTierId, draggedOverItemId, draggedOverTierRowId, draggedOverTierAreaId, selectedItemId, selectedTierId };
             const itemProps = { itemWidth, itemHeight, tierLabelWidth };
@@ -1165,11 +1163,11 @@
                 <div className={`min-h-screen font-sans transition-colors duration-300 ${theme.bg} ${theme.text}`}>
                     {showCommandsPopover && <CommandsPopover theme={theme} onClose={() => setShowCommandsPopover(false)} />}
                     <div aria-live="assertive" style={{ position: 'absolute', width: '1px', height: '1px', padding: '0', margin: '-1px', overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: '0' }}>{announcement}</div>
-
+                    
                     <div ref={appContainerRef} className="mx-auto max-w-full flex flex-col gap-1 p-1">
                         <div className={`relative ${theme.containerBg}`}>
-                             <button
-                                onClick={() => setShowCommandsPopover(true)}
+                             <button 
+                                onClick={() => setShowCommandsPopover(true)} 
                                 className={`absolute top-4 right-4 p-2 rounded-full z-20 ${theme.darkMode ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-500 hover:bg-gray-200 hover:text-black'}`}
                                 aria-label="Show keyboard commands"
                             >
@@ -1179,7 +1177,7 @@
                         </div>
 
                         <div className={`flex ${isSideLayout ? 'flex-row' : 'flex-col gap-1'}`}>
-                            <div
+                            <div 
                                 className="tier-list-container"
                                 style={isSideLayout ? { width: `${tierListPanelWidth}%` } : { width: '100%' }}
                             >
@@ -1194,11 +1192,11 @@
                                     </div>
                                 )}
                             </div>
-
+                            
                             {isSideLayout && (
                                 <>
                                     <div onMouseDown={handleResizeMouseDown} className={`w-1 cursor-col-resize flex-shrink-0 ${theme.bg} hover:bg-blue-500/50 transition-colors`}></div>
-                                    <div
+                                    <div 
                                         className="item-pool-container flex-grow"
                                         style={{ width: `${100 - tierListPanelWidth}%` }}
                                     >
