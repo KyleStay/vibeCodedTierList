@@ -157,19 +157,12 @@
                 role="button"
                 aria-pressed={selectedItemId === item.id}
                 aria-label={`Item: ${item.value || 'image'}. ${item.tierId ? `In tier ${item.tierId}` : 'In item pool'}. Press Space or Enter to select.`}
-                draggable={true}
                 onClick={() => handlers.handleItemClick(item.id)}
-                onDragStart={(e) => handlers.handleItemDragStart(e, item.id)}
-                onDragEnter={(e) => handlers.handleItemDragEnter(e, item.id, item.tierId)}
-                onDragOver={(e) => handlers.handleItemDragOver(e, item.id, item.tierId)}
-                onDragLeave={(e) => handlers.handleItemDragLeave(e, item.id)}
-                onDrop={(e) => handlers.handleItemDrop(e, item.tierId, item.id)}
-                onDragEnd={handlers.cleanupDragStates}
-                onTouchStart={(e) => handlers.handleTouchStart(e, item.id)}
+                onPointerDown={(e) => handlers.handlePointerDown(e, item.id)}
                 className={`relative z-10 cursor-grab active:cursor-grabbing
                             ${draggedItemId === item.id ? 'opacity-30' : ''}
                             ${selectedItemId === item.id ? 'keyboard-selected' : ''}`}
-                style={{ width: `${itemWidth}px`, height: `${itemHeight}px` }}
+                style={{ width: `${itemWidth}px`, height: `${itemHeight}px`, touchAction: 'none' }}
             >
                 <div
                     className={`w-full h-full flex items-center justify-center overflow-hidden ${theme.itemBg} border ${theme.borderColor} rounded-sm shadow-sm transition-all duration-200
@@ -199,9 +192,7 @@
 
             return (
                 <div
-                    onDragOver={(e) => handlers.handleTierRowDragOver(e, tier.id)}
-                    onDragLeave={(e) => handlers.handleTierRowDragLeave(e, tier.id)}
-                    onDrop={(e) => handlers.handleTierDrop(e, tier.id)}
+                    data-tier-row-id={tier.id}
                     className={`flex items-stretch transition-all duration-200
                             ${draggedOverTierRowId === tier.id && draggedTierId && draggedTierId !== tier.id ? 'tier-row-drop-target' : ''}`}
                     style={{ minHeight: `${minTierHeight}px` }}
@@ -213,11 +204,9 @@
                         aria-pressed={selectedTierId === tier.id}
                         aria-label={`Tier: ${tier.value}. Press Space or Enter to select.`}
                         onClick={() => handlers.handleTierClick(tier.id)}
-                        draggable={true}
-                        onDragStart={(e) => handlers.handleTierLabelDragStart(e, tier.id)}
-                        onDragEnd={handlers.cleanupDragStates}
+                        onPointerDown={(e) => handlers.handlePointerDown(e, tier.id, true)}
                         className={`relative flex-shrink-0 p-3 flex items-center justify-center text-center font-bold text-lg text-black group tier-label-draggable ${draggedTierId === tier.id ? 'tier-label-dragging' : ''} ${selectedTierId === tier.id ? 'keyboard-selected' : ''}`}
-                        style={{ backgroundColor: tier.color, width: `${itemProps.tierLabelWidth}px` }}
+                        style={{ backgroundColor: tier.color, width: `${itemProps.tierLabelWidth}px`, touchAction: 'none' }}
                     >
                         <span className="pointer-events-none">{tier.value}</span>
                         <>
@@ -227,10 +216,6 @@
                     </div>
                     <div
                         data-droptarget-tier-id={tier.id}
-                        onDragEnter={(e) => handlers.handleTierAreaDragEnter(e, tier.id)}
-                        onDragOver={(e) => handlers.handleTierAreaDragOver(e, tier.id)}
-                        onDragLeave={(e) => handlers.handleTierAreaDragLeave(e, tier.id)}
-                        onDrop={(e) => handlers.handleItemDrop(e, tier.id, null)}
                         className={`flex-grow p-2 flex flex-wrap gap-2 items-start justify-start ${theme.containerBg}
                             ${draggedOverTierAreaId === tier.id && draggedItemId && !draggedOverItemId ? 'drag-over-tier-area' : ''}`}
                         aria-label={`Tier ${tier.value} content area`}
@@ -244,16 +229,11 @@
         const ItemPool = ({ items, itemPoolTitle, setItemPoolTitle, theme, dragState, handlers, itemProps, deleteMode, poolPosition, onTogglePosition }) => {
             const { draggedOverTierAreaId, draggedItemId, draggedOverItemId, selectedItemId } = dragState;
             const unassignedItems = items.filter(item => item.tierId === null);
-
             const isSideLayout = poolPosition === 'right';
 
             return (
                 <div
                     data-droptarget-tier-id="null"
-                    onDragEnter={(e) => handlers.handleTierAreaDragEnter(e, null)}
-                    onDragOver={(e) => handlers.handleTierAreaDragOver(e, null)}
-                    onDragLeave={(e) => handlers.handleTierAreaDragLeave(e, null)}
-                    onDrop={(e) => handlers.handleItemDrop(e, null, null)}
                     className={`relative p-4 flex flex-col ${theme.containerBg}
                             ${draggedOverTierAreaId === null && draggedItemId ? 'drag-over-tier-area' : ''}
                             ${isSideLayout ? 'h-full' : 'min-h-[150px] w-full'}`}
@@ -272,11 +252,11 @@
                         {unassignedItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} selectedItemId={selectedItemId} />)}
                     </div>
                     <div className="absolute bottom-4 right-4 flex gap-2">
-                         { window.innerWidth >= 1280 && 
+                        { window.innerWidth >= 1280 &&
                             <button onClick={onTogglePosition} className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center ${theme.darkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-400 hover:bg-gray-500'} ${theme.buttonText}`} aria-label={isSideLayout ? "Move item pool to bottom" : "Move item pool to right"}>
                                 {isSideLayout ? <ArrowDownToLineIcon size={24} /> : <ArrowRightToLineIcon size={24} />}
                             </button>
-                         }
+                        }
                         <button onClick={handlers.handleResetAllItemsToPool} className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center ${theme.darkMode ? 'bg-red-700 hover:bg-red-800' : 'bg-red-500 hover:bg-red-600'} ${theme.buttonText}`} aria-label="Reset all items to pool"><RotateCcwIcon size={24}/></button>
                     </div>
                 </div>
@@ -758,11 +738,17 @@
             const [showConfiguration, setShowConfiguration] = useState(true);
             const [showLogs, setShowLogs] = useState(false);
             const [showCommandsPopover, setShowCommandsPopover] = useState(false);
-            const [touchDragGhost, setTouchDragGhost] = useState(null);
-            const touchStartCoords = useRef(null);
-            const isTouchDragging = useRef(false);
-            const longPressTimer = useRef(null);
 
+            // Refactored Drag-and-Drop State
+            const [dragGhost, setDragGhost] = useState(null); // Unified ghost for touch and mouse
+            const dragInfo = useRef({
+                isDragging: false,
+                itemId: null,
+                isTierLabel: false,
+                startX: 0,
+                startY: 0,
+                longPressTimer: null,
+            });
 
             // Layout state
             const [poolPosition, setPoolPosition] = useState('bottom');
@@ -1155,110 +1141,100 @@
             }, [tiers, itemPoolTitle]);
 
             const cleanupDragStates = () => {
-                if (longPressTimer.current) {
-                    clearTimeout(longPressTimer.current);
-                    longPressTimer.current = null;
+                if (dragInfo.current.longPressTimer) {
+                    clearTimeout(dragInfo.current.longPressTimer);
                 }
+                dragInfo.current = { isDragging: false, itemId: null, isTierLabel: false, startX: 0, startY: 0, longPressTimer: null };
+                setDragGhost(null);
                 setDraggedItemId(null);
                 setDraggedTierId(null);
                 setDraggedOverItemId(null);
                 setDraggedOverTierRowId(null);
                 setDraggedOverTierAreaId(null);
-                setTouchDragGhost(null);
-                touchStartCoords.current = null;
-                isTouchDragging.current = false;
             };
 
-            const handleItemDragStart = (e, itemId) => { setDraggedItemId(itemId); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', itemId); };
-            const handleItemDragEnter = (e, targetItemId, targetItemTierId) => { e.preventDefault(); e.stopPropagation(); if (draggedItemId && draggedItemId !== targetItemId) { setDraggedOverItemId(targetItemId); setDraggedOverTierAreaId(targetItemTierId); } };
-            const handleItemDragOver = (e, targetItemId, targetItemTierId) => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'move'; if (draggedItemId && draggedItemId !== targetItemId) { setDraggedOverItemId(targetItemId); setDraggedOverTierAreaId(targetItemTierId); } };
-            const handleItemDragLeave = (e, itemId) => { e.stopPropagation(); if (!e.currentTarget.contains(e.relatedTarget)) { setDraggedOverItemId(null); } };
-            const handleTierAreaDragEnter = (e, tierIdContext) => { e.preventDefault(); e.stopPropagation(); if (draggedItemId) { setDraggedOverTierAreaId(tierIdContext); setDraggedOverItemId(null); } };
-            const handleTierAreaDragOver = (e, tierIdContext) => { e.preventDefault(); e.stopPropagation(); if (draggedItemId) { e.dataTransfer.dropEffect = 'move'; setDraggedOverTierAreaId(tierIdContext); setDraggedOverItemId(null); } };
-            const handleTierAreaDragLeave = (e, tierIdContext) => { e.stopPropagation(); if (!e.currentTarget.contains(e.relatedTarget) && draggedItemId) { setDraggedOverTierAreaId(null); } };
-            const handleTierLabelDragStart = (e, tierId) => { setDraggedTierId(tierId); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', tierId); };
-            const handleTierRowDragOver = (e, targetTierId) => { e.preventDefault(); if (draggedItemId) { e.dataTransfer.dropEffect = 'move'; } else if (draggedTierId && draggedTierId !== targetTierId) { e.dataTransfer.dropEffect = 'move'; setDraggedOverTierRowId(targetTierId); } };
-            const handleTierRowDragLeave = (e, tierId) => { if (!e.currentTarget.contains(e.relatedTarget) && draggedTierId) { setDraggedOverTierRowId(null); } };
-            
-            const handleItemDrop = (e, targetTierId, beforeItemId = null) => {
-                e.preventDefault(); e.stopPropagation();
-                const droppedItemId = draggedItemId || e.dataTransfer.getData('text/plain');
-                if (!droppedItemId || draggedTierId) { cleanupDragStates(); return; }
-                moveItem(droppedItemId, targetTierId, beforeItemId);
-                cleanupDragStates();
-            };
+            const handlePointerDown = (e, id, isTier = false) => {
+                // Only respond to the primary pointer (e.g., first finger)
+                if (!e.isPrimary) return;
 
-            const handleTierDrop = (e, targetTierId) => {
+                // Prevent text selection and other default actions
                 e.preventDefault();
-                const dTierId = draggedTierId || e.dataTransfer.getData('text/plain');
-                if (!dTierId || dTierId === targetTierId || draggedItemId) { cleanupDragStates(); return; }
-                setTiers(prev => {
-                    const dTier = prev.find(t => t.id === dTierId); if (!dTier) return prev;
-                    const remaining = prev.filter(t => t.id !== dTierId);
-                    const targetIdx = remaining.findIndex(t => t.id === targetTierId);
-                    if (targetIdx !== -1) remaining.splice(targetIdx, 0, dTier); else remaining.push(dTier);
-                    return remaining;
-                });
-                cleanupDragStates();
-            };
 
-            // --- TOUCH EVENT HANDLERS (MOBILE DRAG & DROP FIX) ---
-            const handleTouchStart = (e, itemId) => {
-                const touch = e.touches[0];
-                touchStartCoords.current = { x: touch.clientX, y: touch.clientY, itemId: itemId };
+                dragInfo.current.itemId = id;
+                dragInfo.current.isTierLabel = isTier;
+                dragInfo.current.startX = e.clientX;
+                dragInfo.current.startY = e.clientY;
 
-                // Set a timer to initiate drag after a short delay (e.g., 200ms)
-                // This helps distinguish between a scroll and a drag attempt.
-                longPressTimer.current = setTimeout(() => {
-                    isTouchDragging.current = true;
-                    setDraggedItemId(itemId);
-                    const item = items.find(i => i.id === itemId);
-                    if (item) {
-                        setTouchDragGhost({
-                            itemId: itemId,
-                            x: touch.clientX,
-                            y: touch.clientY,
-                            item: item,
-                        });
+                // Set a timer to initiate drag after a short delay (long press)
+                dragInfo.current.longPressTimer = setTimeout(() => {
+                    dragInfo.current.isDragging = true;
+                    if (isTier) {
+                        setDraggedTierId(id);
+                    } else {
+                        setDraggedItemId(id);
+                        const item = items.find(i => i.id === id);
+                        if (item) {
+                            setDragGhost({
+                                item: item,
+                                x: e.clientX,
+                                y: e.clientY,
+                            });
+                        }
                     }
-                }, 200);
+                }, 200); // 200ms delay for long press
+
+                window.addEventListener('pointermove', handlePointerMove);
+                window.addEventListener('pointerup', handlePointerUp);
+                window.addEventListener('pointercancel', handlePointerUp);
             };
 
-            const handleTouchMove = (e) => {
-                if (!touchStartCoords.current) return;
+            const handlePointerMove = (e) => {
+                if (!e.isPrimary) return;
 
-                const touch = e.touches[0];
-                const { clientX, clientY } = touch;
+                const { clientX, clientY } = e;
+                const { startX, startY, isDragging, longPressTimer } = dragInfo.current;
 
-                // If not yet dragging, check if the finger has moved enough.
-                // If it has, cancel the long-press timer to prevent drag initiation.
-                if (!isTouchDragging.current) {
-                    const { x: startX, y: startY } = touchStartCoords.current;
+                // If not yet dragging, check if the pointer has moved enough to be considered a scroll.
+                // If so, cancel the drag initiation.
+                if (!isDragging) {
                     const deltaX = clientX - startX;
                     const deltaY = clientY - startY;
                     if (Math.sqrt(deltaX * deltaX + deltaY * deltaY) > 10) { // Moved more than 10px
-                        clearTimeout(longPressTimer.current);
-                        touchStartCoords.current = null;
+                        clearTimeout(longPressTimer);
+                        dragInfo.current.longPressTimer = null;
+                        // Since it's a scroll, release the pointer capture
+                        handlePointerUp(e);
                     }
-                    return; // Don't do anything else until drag is confirmed
+                    return;
                 }
 
                 // If dragging has started, prevent the page from scrolling.
                 e.preventDefault();
 
                 // Update the ghost's position
-                setTouchDragGhost(prev => (prev ? { ...prev, x: clientX, y: clientY } : null));
+                setDragGhost(prev => (prev ? { ...prev, x: clientX, y: clientY } : null));
 
-                // Find the element under the finger
-                const ghostEl = document.getElementById('touch-drag-ghost');
+                // Find the element under the pointer
+                const ghostEl = document.getElementById('drag-ghost');
                 if (ghostEl) ghostEl.style.display = 'none'; // Hide ghost to see what's underneath
-
                 const targetEl = document.elementFromPoint(clientX, clientY);
-
                 if (ghostEl) ghostEl.style.display = 'flex'; // Show ghost again
 
                 if (!targetEl) return;
 
+                // Handle logic for dragging a tier label
+                if (dragInfo.current.isTierLabel) {
+                    const tierRow = targetEl.closest('[data-tier-row-id]');
+                    if (tierRow) {
+                        const targetTierId = tierRow.dataset.tierRowId;
+                        setDraggedOverTierRowId(targetTierId);
+                    } else {
+                        setDraggedOverTierRowId(null);
+                    }
+                    return;
+                }
+
+                // Handle logic for dragging an item
                 const tierArea = targetEl.closest('[data-droptarget-tier-id]');
                 const targetItemEl = targetEl.closest('[id^="item-"]');
 
@@ -1280,21 +1256,36 @@
                 }
             };
 
-            const handleTouchEnd = (e) => {
+            const handlePointerUp = (e) => {
+                window.removeEventListener('pointermove', handlePointerMove);
+                window.removeEventListener('pointerup', handlePointerUp);
+                window.removeEventListener('pointercancel', handlePointerUp);
+
                 // If the timer is still running, it was a tap, not a drag.
-                if (longPressTimer.current) {
-                    clearTimeout(longPressTimer.current);
+                if (dragInfo.current.longPressTimer) {
+                    clearTimeout(dragInfo.current.longPressTimer);
                 }
 
                 // If we were dragging, perform the move operation.
-                if (isTouchDragging.current && draggedItemId) {
-                    moveItem(draggedItemId, draggedOverTierAreaId, draggedOverItemId);
+                if (dragInfo.current.isDragging) {
+                    if (draggedTierId && draggedOverTierRowId) {
+                         // Tier drop logic
+                         setTiers(prev => {
+                            const dTier = prev.find(t => t.id === draggedTierId); if (!dTier) return prev;
+                            const remaining = prev.filter(t => t.id !== draggedTierId);
+                            const targetIdx = remaining.findIndex(t => t.id === draggedOverTierRowId);
+                            if (targetIdx !== -1) remaining.splice(targetIdx, 0, dTier); else remaining.push(dTier);
+                            return remaining;
+                        });
+                    } else if (draggedItemId) {
+                        // Item drop logic
+                        moveItem(draggedItemId, draggedOverTierAreaId, draggedOverItemId);
+                    }
                 }
 
-                // Always clean up state on touch end.
+                // Always clean up state on pointer up.
                 cleanupDragStates();
             };
-
 
             const handleItemClick = useCallback((itemId) => {
                 // This function is now primarily for keyboard accessibility
@@ -1529,7 +1520,7 @@
             const dragState = { draggedItemId, draggedTierId, draggedOverItemId, draggedOverTierRowId, draggedOverTierAreaId, selectedItemId, selectedTierId };
             const itemProps = { itemWidth, itemHeight, tierLabelWidth };
             const itemSetters = { setItemWidth, setItemHeight, setTierLabelWidth };
-            const allHandlers = { handleItemDragStart, handleTouchStart, handleItemDragEnter, handleItemDragOver, handleItemDragLeave, handleItemDrop, handleTierAreaDragEnter, handleTierAreaDragOver, handleTierAreaDragLeave, handleTierLabelDragStart, handleTierRowDragOver, handleTierRowDragLeave, handleTierDrop, handleDeleteItem, handleDeleteTier, startEditingTier, cleanupDragStates, addLog, handleAddTier, handleAddItem, handlePasteItems, handleResetAllItemsToPool, handleSaveEditedTier, cancelEditingTier, handleExportState, handleImportState, handleItemImageUpload, handleExportImage, handleItemClick, handleTierClick, handleClearAllData, handleNewTierList, handleExportAllStates, handleOpenTierList };
+            const allHandlers = { handlePointerDown, handleDeleteItem, handleDeleteTier, startEditingTier, addLog, handleAddTier, handleAddItem, handlePasteItems, handleResetAllItemsToPool, handleSaveEditedTier, cancelEditingTier, handleExportState, handleImportState, handleItemImageUpload, handleExportImage, handleItemClick, handleTierClick, handleClearAllData, handleNewTierList, handleExportAllStates, handleOpenTierList };
             const uiState = { showConfiguration, editingTierId, showLogs };
             const uiSetters = { setShowConfiguration, setShowLogs, handleSelectFirstItemInPool };
             const data = { logs, standardColors };
@@ -1542,26 +1533,23 @@
             return (
                 <div
                     className={`min-h-screen font-sans transition-colors duration-300 ${theme.bg} ${theme.text}`}
-                    onTouchMove={handleTouchMove}
-                    onTouchEnd={handleTouchEnd}
-                    onTouchCancel={cleanupDragStates}
                 >
-                    {touchDragGhost && (
+                    {dragGhost && (
                         <div
-                            id="touch-drag-ghost"
+                            id="drag-ghost"
                             className={`fixed flex items-center justify-center rounded-sm shadow-lg z-50 pointer-events-none ${theme.itemBg} border ${theme.borderColor}`}
                             style={{
-                                left: `${touchDragGhost.x}px`,
-                                top: `${touchDragGhost.y}px`,
+                                left: `${dragGhost.x}px`,
+                                top: `${dragGhost.y}px`,
                                 width: `${itemWidth}px`,
                                 height: `${itemHeight}px`,
-                                transform: 'translate(-50%, -50%)',
+                                transform: 'translate(-50%, -50%) scale(1.05)', // Scale up for "lift" effect
                             }}
                         >
-                             {touchDragGhost.item.type === 'image' ? (
-                                <img src={touchDragGhost.item.value} alt="ghost" className="w-full h-full object-contain" />
+                            {dragGhost.item.type === 'image' ? (
+                                <img src={dragGhost.item.value} alt="ghost" className="w-full h-full object-contain" />
                             ) : (
-                                <span className={`text-sm font-medium ${theme.inputText} text-center p-1 break-all`}>{touchDragGhost.item.value}</span>
+                                <span className={`text-sm font-medium ${theme.inputText} text-center p-1 break-all`}>{dragGhost.item.value}</span>
                             )}
                         </div>
                     )}
@@ -1572,7 +1560,7 @@
                     
                     <div ref={appContainerRef} className="mx-auto max-w-full flex flex-col gap-1 p-1">
                         <div className={`relative ${theme.containerBg}`}>
-                             <button 
+                            <button
                                 onClick={() => setShowCommandsPopover(true)} 
                                 className={`absolute top-4 right-4 p-2 rounded-full z-20 ${theme.darkMode ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-500 hover:bg-gray-200 hover:text-black'}`}
                                 aria-label="Show keyboard commands"
