@@ -1154,10 +1154,9 @@
             };
 
             const handlePointerDown = (e, id, isTier = false) => {
-                // Only respond to the primary pointer (e.g., first finger)
                 if (!e.isPrimary) return;
 
-                // Prevent text selection and other default actions
+                // **FIX:** Prevent default browser actions like text selection/callout menu on iOS.
                 e.preventDefault();
 
                 dragInfo.current.itemId = id;
@@ -1165,7 +1164,6 @@
                 dragInfo.current.startX = e.clientX;
                 dragInfo.current.startY = e.clientY;
 
-                // Set a timer to initiate drag after a short delay (long press)
                 dragInfo.current.longPressTimer = setTimeout(() => {
                     dragInfo.current.isDragging = true;
                     if (isTier) {
@@ -1181,7 +1179,7 @@
                             });
                         }
                     }
-                }, 200); // 200ms delay for long press
+                }, 200);
 
                 window.addEventListener('pointermove', handlePointerMove);
                 window.addEventListener('pointerup', handlePointerUp);
@@ -1194,47 +1192,34 @@
                 const { clientX, clientY } = e;
                 const { startX, startY, isDragging, longPressTimer } = dragInfo.current;
 
-                // If not yet dragging, check if the pointer has moved enough to be considered a scroll.
-                // If so, cancel the drag initiation.
                 if (!isDragging) {
                     const deltaX = clientX - startX;
                     const deltaY = clientY - startY;
-                    if (Math.sqrt(deltaX * deltaX + deltaY * deltaY) > 10) { // Moved more than 10px
+                    if (Math.sqrt(deltaX * deltaX + deltaY * deltaY) > 10) {
                         clearTimeout(longPressTimer);
                         dragInfo.current.longPressTimer = null;
-                        // Since it's a scroll, release the pointer capture
                         handlePointerUp(e);
                     }
                     return;
                 }
 
-                // If dragging has started, prevent the page from scrolling.
                 e.preventDefault();
 
-                // Update the ghost's position
                 setDragGhost(prev => (prev ? { ...prev, x: clientX, y: clientY } : null));
 
-                // Find the element under the pointer
                 const ghostEl = document.getElementById('drag-ghost');
-                if (ghostEl) ghostEl.style.display = 'none'; // Hide ghost to see what's underneath
+                if (ghostEl) ghostEl.style.display = 'none';
                 const targetEl = document.elementFromPoint(clientX, clientY);
-                if (ghostEl) ghostEl.style.display = 'flex'; // Show ghost again
+                if (ghostEl) ghostEl.style.display = 'flex';
 
                 if (!targetEl) return;
 
-                // Handle logic for dragging a tier label
                 if (dragInfo.current.isTierLabel) {
                     const tierRow = targetEl.closest('[data-tier-row-id]');
-                    if (tierRow) {
-                        const targetTierId = tierRow.dataset.tierRowId;
-                        setDraggedOverTierRowId(targetTierId);
-                    } else {
-                        setDraggedOverTierRowId(null);
-                    }
+                    setDraggedOverTierRowId(tierRow ? tierRow.dataset.tierRowId : null);
                     return;
                 }
 
-                // Handle logic for dragging an item
                 const tierArea = targetEl.closest('[data-droptarget-tier-id]');
                 const targetItemEl = targetEl.closest('[id^="item-"]');
 
@@ -1244,9 +1229,7 @@
 
                     if (targetItemEl) {
                         const targetItemId = targetItemEl.id.replace('item-', '');
-                        if (targetItemId !== draggedItemId) {
-                            setDraggedOverItemId(targetItemId);
-                        }
+                        setDraggedOverItemId(targetItemId !== draggedItemId ? targetItemId : null);
                     } else {
                         setDraggedOverItemId(null);
                     }
@@ -1261,34 +1244,54 @@
                 window.removeEventListener('pointerup', handlePointerUp);
                 window.removeEventListener('pointercancel', handlePointerUp);
 
-                // If the timer is still running, it was a tap, not a drag.
                 if (dragInfo.current.longPressTimer) {
                     clearTimeout(dragInfo.current.longPressTimer);
                 }
 
-                // If we were dragging, perform the move operation.
                 if (dragInfo.current.isDragging) {
-                    if (draggedTierId && draggedOverTierRowId) {
-                         // Tier drop logic
-                         setTiers(prev => {
-                            const dTier = prev.find(t => t.id === draggedTierId); if (!dTier) return prev;
-                            const remaining = prev.filter(t => t.id !== draggedTierId);
-                            const targetIdx = remaining.findIndex(t => t.id === draggedOverTierRowId);
-                            if (targetIdx !== -1) remaining.splice(targetIdx, 0, dTier); else remaining.push(dTier);
-                            return remaining;
-                        });
-                    } else if (draggedItemId) {
-                        // Item drop logic
-                        moveItem(draggedItemId, draggedOverTierAreaId, draggedOverItemId);
+                    // **FIX:** Perform a final, accurate check for the drop target on pointer up.
+                    const { clientX, clientY } = e;
+                    const ghostEl = document.getElementById('drag-ghost');
+                    if (ghostEl) ghostEl.style.display = 'none';
+                    const finalTargetEl = document.elementFromPoint(clientX, clientY);
+                    if (ghostEl) ghostEl.style.display = 'flex';
+
+                    if (finalTargetEl) {
+                        if (draggedTierId) {
+                            const finalTierRow = finalTargetEl.closest('[data-tier-row-id]');
+                            if (finalTierRow) {
+                                const finalTargetTierId = finalTierRow.dataset.tierRowId;
+                                setTiers(prev => {
+                                    const dTier = prev.find(t => t.id === draggedTierId); if (!dTier) return prev;
+                                    const remaining = prev.filter(t => t.id !== draggedTierId);
+                                    const targetIdx = remaining.findIndex(t => t.id === finalTargetTierId);
+                                    if (targetIdx !== -1) remaining.splice(targetIdx, 0, dTier); else remaining.push(dTier);
+                                    return remaining;
+                                });
+                            }
+                        } else if (draggedItemId) {
+                            const finalTierArea = finalTargetEl.closest('[data-droptarget-tier-id]');
+                            const finalTargetItemEl = finalTargetEl.closest('[id^="item-"]');
+
+                            if (finalTierArea) {
+                                const finalTargetTierId = finalTierArea.dataset.droptargetTierId === 'null' ? null : finalTierArea.dataset.droptargetTierId;
+                                let beforeItemId = null;
+                                if (finalTargetItemEl) {
+                                    const finalTargetItemId = finalTargetItemEl.id.replace('item-', '');
+                                    if(finalTargetItemId !== draggedItemId) {
+                                        beforeItemId = finalTargetItemId;
+                                    }
+                                }
+                                moveItem(draggedItemId, finalTargetTierId, beforeItemId);
+                            }
+                        }
                     }
                 }
 
-                // Always clean up state on pointer up.
                 cleanupDragStates();
             };
 
             const handleItemClick = useCallback((itemId) => {
-                // This function is now primarily for keyboard accessibility
                 setSelectedItemId(prevSelectedId => {
                     if (prevSelectedId === itemId) {
                         addLog(`Item deselected. Entering Navigation Mode.`, 'event');
