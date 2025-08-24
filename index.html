@@ -704,7 +704,7 @@
                 // 2. Fallback to URL hash (for sharing)
                 const { data: urlData, error: urlError } = deserializeState(window.location.hash.substring(1));
                 if (urlData) {
-                       console.log("Loaded state from URL.");
+                        console.log("Loaded state from URL.");
                     return urlData;
                 }
                 if(urlError){
@@ -756,6 +756,8 @@
             const [touchDragGhost, setTouchDragGhost] = useState(null);
             const touchStartCoords = useRef(null);
             const isTouchDragging = useRef(false);
+            const longPressTimer = useRef(null);
+
 
             // Layout state
             const [poolPosition, setPoolPosition] = useState('bottom');
@@ -961,7 +963,7 @@
                                     importedCount++;
                                 }
                             });
-                               addLog(`Imported ${importedCount} tier lists from backup.`, 'action');
+                                addLog(`Imported ${importedCount} tier lists from backup.`, 'action');
                         } else {
                             throw new Error("Invalid file format.");
                         }
@@ -1148,6 +1150,10 @@
             }, [tiers, itemPoolTitle]);
 
             const cleanupDragStates = () => {
+                if (longPressTimer.current) {
+                    clearTimeout(longPressTimer.current);
+                    longPressTimer.current = null;
+                }
                 setDraggedItemId(null);
                 setDraggedTierId(null);
                 setDraggedOverItemId(null);
@@ -1191,11 +1197,26 @@
                 cleanupDragStates();
             };
 
-            // --- TOUCH EVENT HANDLERS ---
+            // --- TOUCH EVENT HANDLERS (MOBILE DRAG & DROP FIX) ---
             const handleTouchStart = (e, itemId) => {
                 const touch = e.touches[0];
                 touchStartCoords.current = { x: touch.clientX, y: touch.clientY, itemId: itemId };
-                setDraggedItemId(itemId); // Tentatively set dragged item
+
+                // Set a timer to initiate drag after a short delay (e.g., 200ms)
+                // This helps distinguish between a scroll and a drag attempt.
+                longPressTimer.current = setTimeout(() => {
+                    isTouchDragging.current = true;
+                    setDraggedItemId(itemId);
+                    const item = items.find(i => i.id === itemId);
+                    if (item) {
+                        setTouchDragGhost({
+                            itemId: itemId,
+                            x: touch.clientX,
+                            y: touch.clientY,
+                            item: item,
+                        });
+                    }
+                }, 200);
             };
 
             const handleTouchMove = (e) => {
@@ -1203,64 +1224,69 @@
 
                 const touch = e.touches[0];
                 const { clientX, clientY } = touch;
-                const { x: startX, y: startY, itemId } = touchStartCoords.current;
 
-                const deltaX = clientX - startX;
-                const deltaY = clientY - startY;
-
-                // Start dragging only if moved more than a threshold and mostly horizontally
-                if (!isTouchDragging.current && Math.abs(deltaX) > 10 && Math.abs(deltaX) > Math.abs(deltaY)) {
-                    isTouchDragging.current = true;
-                    const item = items.find(i => i.id === itemId);
-                    if(item) {
-                        setTouchDragGhost({
-                            itemId: itemId,
-                            x: clientX,
-                            y: clientY,
-                            item: item,
-                        });
+                // If not yet dragging, check if the finger has moved enough.
+                // If it has, cancel the long-press timer to prevent drag initiation.
+                if (!isTouchDragging.current) {
+                    const { x: startX, y: startY } = touchStartCoords.current;
+                    const deltaX = clientX - startX;
+                    const deltaY = clientY - startY;
+                    if (Math.sqrt(deltaX * deltaX + deltaY * deltaY) > 10) { // Moved more than 10px
+                        clearTimeout(longPressTimer.current);
+                        touchStartCoords.current = null;
                     }
+                    return; // Don't do anything else until drag is confirmed
                 }
 
-                if (isTouchDragging.current) {
-                    e.preventDefault();
-                    setTouchDragGhost(prev => (prev ? { ...prev, x: clientX, y: clientY } : null));
+                // If dragging has started, prevent the page from scrolling.
+                e.preventDefault();
 
-                    const ghostEl = document.getElementById('touch-drag-ghost');
-                    if (ghostEl) ghostEl.style.display = 'none';
+                // Update the ghost's position
+                setTouchDragGhost(prev => (prev ? { ...prev, x: clientX, y: clientY } : null));
 
-                    const targetEl = document.elementFromPoint(clientX, clientY);
+                // Find the element under the finger
+                const ghostEl = document.getElementById('touch-drag-ghost');
+                if (ghostEl) ghostEl.style.display = 'none'; // Hide ghost to see what's underneath
 
-                    if (ghostEl) ghostEl.style.display = 'flex';
+                const targetEl = document.elementFromPoint(clientX, clientY);
 
-                    if (!targetEl) return;
+                if (ghostEl) ghostEl.style.display = 'flex'; // Show ghost again
 
-                    const tierArea = targetEl.closest('[data-droptarget-tier-id]');
-                    const targetItemEl = targetEl.closest('[id^="item-"]');
+                if (!targetEl) return;
 
-                    if (tierArea) {
-                        const tierId = tierArea.dataset.droptargetTierId === 'null' ? null : tierArea.dataset.droptargetTierId;
-                        setDraggedOverTierAreaId(tierId);
+                const tierArea = targetEl.closest('[data-droptarget-tier-id]');
+                const targetItemEl = targetEl.closest('[id^="item-"]');
 
-                        if (targetItemEl) {
-                            const targetItemId = targetItemEl.id.replace('item-', '');
-                            if (targetItemId !== draggedItemId) {
-                                setDraggedOverItemId(targetItemId);
-                            }
-                        } else {
-                            setDraggedOverItemId(null);
+                if (tierArea) {
+                    const tierId = tierArea.dataset.droptargetTierId === 'null' ? null : tierArea.dataset.droptargetTierId;
+                    setDraggedOverTierAreaId(tierId);
+
+                    if (targetItemEl) {
+                        const targetItemId = targetItemEl.id.replace('item-', '');
+                        if (targetItemId !== draggedItemId) {
+                            setDraggedOverItemId(targetItemId);
                         }
                     } else {
-                        setDraggedOverTierAreaId(null);
                         setDraggedOverItemId(null);
                     }
+                } else {
+                    setDraggedOverTierAreaId(null);
+                    setDraggedOverItemId(null);
                 }
             };
 
             const handleTouchEnd = (e) => {
+                // If the timer is still running, it was a tap, not a drag.
+                if (longPressTimer.current) {
+                    clearTimeout(longPressTimer.current);
+                }
+
+                // If we were dragging, perform the move operation.
                 if (isTouchDragging.current && draggedItemId) {
                     moveItem(draggedItemId, draggedOverTierAreaId, draggedOverItemId);
                 }
+
+                // Always clean up state on touch end.
                 cleanupDragStates();
             };
 
@@ -1513,6 +1539,7 @@
                     className={`min-h-screen font-sans transition-colors duration-300 ${theme.bg} ${theme.text}`}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
+                    onTouchCancel={cleanupDragStates}
                 >
                     {touchDragGhost && (
                         <div
