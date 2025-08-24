@@ -112,21 +112,29 @@
 
                 return { data: validatedData, error: null };
             }
-            return { data: null, error: { message: "Invalid state structure from URL.", type: "warning" } };
+            return { data: null, error: { message: "Invalid state structure.", type: "warning" } };
         };
 
-        const serializeState = (stateData) => {
-            try { return encodeURIComponent(JSON.stringify(stateData)); }
-            catch (error) { console.error("Error serializing state:", error); return ""; }
-        };
-
-        const deserializeState = (encodedStringFromHash) => {
-            if (!encodedStringFromHash) return { data: null, error: null };
+        const serializeStateForURL = (stateData) => {
             try {
-                const parsedData = JSON.parse(decodeURIComponent(encodedStringFromHash));
+                // Create a deep copy to avoid modifying the original state
+                const stateToSerialize = JSON.parse(JSON.stringify(stateData));
+                // Filter out items with base64 image data
+                stateToSerialize.items = stateToSerialize.items.filter(item => !item.value.startsWith('data:image'));
+                return encodeURIComponent(JSON.stringify(stateToSerialize));
+            } catch (error) {
+                console.error("Error serializing state for URL:", error);
+                return "";
+            }
+        };
+
+        const deserializeState = (encodedString) => {
+            if (!encodedString) return { data: null, error: null };
+            try {
+                const parsedData = JSON.parse(decodeURIComponent(encodedString));
                 return validateStateData(parsedData);
             } catch (e) {
-                return { data: null, error: { message: `Error parsing URL state: ${e.message}`, type: "error" } };
+                return { data: null, error: { message: `Error parsing state: ${e.message}`, type: "error" } };
             }
         };
 
@@ -570,27 +578,69 @@
         };
 
         function App() {
+            const LOCAL_STORAGE_KEY = 'tierListMakerState';
+
+            // --- STATE INITIALIZATION LOGIC ---
+            const getInitialState = () => {
+                // 1. Try loading from Local Storage first (for persistence)
+                const savedStateJSON = localStorage.getItem(LOCAL_STORAGE_KEY);
+                if (savedStateJSON) {
+                    try {
+                        const parsed = JSON.parse(savedStateJSON);
+                        const { data, error } = validateStateData(parsed);
+                        if (data) {
+                            console.log("Loaded state from Local Storage.");
+                            return data;
+                        }
+                    } catch (e) {
+                        console.error("Could not parse state from Local Storage:", e);
+                    }
+                }
+
+                // 2. Fallback to URL hash (for sharing)
+                const { data: urlData, error: urlError } = deserializeState(window.location.hash.substring(1));
+                if (urlData) {
+                     console.log("Loaded state from URL.");
+                    return urlData;
+                }
+                if(urlError){
+                    // Can't use addLog here yet, so just console log
+                    console.error(urlError.message);
+                }
+
+                // 3. Fallback to default state
+                console.log("Using default initial state.");
+                return {
+                    tiers: [
+                        { id: 's', type: 'name', value: 'S', items: [], color: '#ff7f7f' }, { id: 'a', type: 'name', value: 'A', items: [], color: '#ffbf7f' },
+                        { id: 'b', type: 'name', value: 'B', items: [], color: '#ffff7f' }, { id: 'c', type: 'name', value: 'C', items: [], color: '#bfff7f' },
+                        { id: 'd', type: 'name', value: 'D', items: [], color: '#7fbfff' },
+                        { id: 'f', type: 'name', value: 'F', items: [], color: '#bf7fff' },
+                    ],
+                    items: [],
+                    tierListTitle: 'My Tier List',
+                    itemPoolTitle: 'Item Pool',
+                    itemWidth: 80,
+                    itemHeight: 80,
+                    tierLabelWidth: 128,
+                };
+            };
+
+            const initialState = getInitialState();
+
             // --- STATE MANAGEMENT ---
             const [darkMode, setDarkMode] = useState(true);
             const [logs, setLogs] = useState([]);
             const [announcement, setAnnouncement] = useState("");
             const addLog = useCallback((message, type = 'info') => setLogs(prev => [{ message, type, timestamp: new Date().toLocaleTimeString() }, ...prev].slice(0, 100)), []);
 
-            const initialDeserializedResult = deserializeState(window.location.hash.substring(1));
-            const initialData = initialDeserializedResult.data;
-
-            const [tiers, setTiers] = useState(initialData?.tiers || [
-                { id: 's', type: 'name', value: 'S', items: [], color: '#ff7f7f' }, { id: 'a', type: 'name', value: 'A', items: [], color: '#ffbf7f' },
-                { id: 'b', type: 'name', value: 'B', items: [], color: '#ffff7f' }, { id: 'c', type: 'name', value: 'C', items: [], color: '#bfff7f' },
-                { id: 'd', type: 'name', value: 'D', items: [], color: '#7fbfff' },
-                { id: 'f', type: 'name', value: 'F', items: [], color: '#bf7fff' },
-            ]);
-            const [items, setItems] = useState(initialData?.items || []);
-            const [tierListTitle, setTierListTitle] = useState(initialData?.tierListTitle || 'My Tier List');
-            const [itemPoolTitle, setItemPoolTitle] = useState(initialData?.itemPoolTitle || 'Item Pool');
-            const [itemWidth, setItemWidth] = useState(initialData?.itemWidth || 80);
-            const [itemHeight, setItemHeight] = useState(initialData?.itemHeight || 80);
-            const [tierLabelWidth, setTierLabelWidth] = useState(initialData?.tierLabelWidth || 128);
+            const [tiers, setTiers] = useState(initialState.tiers);
+            const [items, setItems] = useState(initialState.items);
+            const [tierListTitle, setTierListTitle] = useState(initialState.tierListTitle);
+            const [itemPoolTitle, setItemPoolTitle] = useState(initialState.itemPoolTitle);
+            const [itemWidth, setItemWidth] = useState(initialState.itemWidth);
+            const [itemHeight, setItemHeight] = useState(initialState.itemHeight);
+            const [tierLabelWidth, setTierLabelWidth] = useState(initialState.tierLabelWidth);
             const [deleteMode, setDeleteMode] = useState(false);
             const [isFullscreen, setIsFullscreen] = useState(false);
             
@@ -633,14 +683,30 @@
             
             useEffect(() => { document.documentElement.classList.toggle('dark', darkMode); document.body.style.backgroundColor = darkMode ? '#000000' : '#f3f4f6'; }, [darkMode]);
 
+            // Combined useEffect for saving state to URL and Local Storage
             useEffect(() => {
-                const stateToSave = { tiers, items, tierListTitle, itemWidth, itemHeight, itemPoolTitle, tierLabelWidth };
-                const hashString = serializeState(stateToSave);
-                const id = setTimeout(() => { if (window.location.hash.substring(1) !== hashString) { window.location.hash = hashString; } }, 700);
-                return () => clearTimeout(id);
-            }, [tiers, items, tierListTitle, itemWidth, itemHeight, itemPoolTitle, tierLabelWidth]);
+                const fullState = { tiers, items, tierListTitle, itemWidth, itemHeight, itemPoolTitle, tierLabelWidth };
 
-            useEffect(() => { if (initialDeserializedResult.error) { addLog(initialDeserializedResult.error.message, initialDeserializedResult.error.type); } }, [initialDeserializedResult.error, addLog]);
+                const timerId = setTimeout(() => {
+                    // Save full state to Local Storage for persistence
+                    try {
+                        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(fullState));
+                    } catch (error) {
+                        console.error("Error saving state to Local Storage:", error);
+                        addLog("Could not save state to browser storage.", "error");
+                    }
+
+                    // Save shareable state (without base64 images) to URL
+                    const hashString = serializeStateForURL(fullState);
+                    // Check if hash needs updating to avoid unnecessary history entries
+                    if (decodeURIComponent(window.location.hash.substring(1)) !== decodeURIComponent(hashString)) {
+                        window.location.hash = hashString;
+                    }
+                }, 700);
+
+                return () => clearTimeout(timerId);
+            }, [tiers, items, tierListTitle, itemWidth, itemHeight, itemPoolTitle, tierLabelWidth, addLog]);
+
 
             const toggleFullScreen = useCallback(() => {
                 if (!document.fullscreenElement) {
