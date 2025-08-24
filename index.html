@@ -44,7 +44,7 @@
         .toggle-checkbox:checked { right: 0; border-color: #4F46E5; }
         .toggle-checkbox:checked + .toggle-label { background-color: #4F46E5; }
 
-        /* Accessibility Focus & Selection Styles */
+        /* Accessibility & Mobile Selection Styles */
         *:focus-visible {
             outline: 3px solid #60A5FA;
             outline-offset: 2px;
@@ -55,6 +55,12 @@
             outline-offset: 2px;
             border-radius: 2px;
             box-shadow: 0 0 10px #4F46E5;
+        }
+        .mobile-selected-item {
+            outline: 3px solid #818cf8 !important;
+            outline-offset: 2px;
+            border-radius: 2px;
+            box-shadow: 0 0 12px #818cf8;
         }
     </style>
 </head>
@@ -145,7 +151,7 @@
 
         // --- UI COMPONENTS ---
 
-        const DraggableItem = memo(({ item, itemWidth, itemHeight, theme, draggedItemId, draggedOverItemId, handlers, addLog, deleteMode, selectedItemId }) => (
+        const DraggableItem = memo(({ item, itemWidth, itemHeight, theme, draggedItemId, draggedOverItemId, handlers, addLog, deleteMode, selectedItemId, mobileSelectedItem }) => (
             <div
                 id={`item-${item.id}`}
                 tabIndex={0}
@@ -153,17 +159,17 @@
                 aria-pressed={selectedItemId === item.id}
                 aria-label={`Item: ${item.value || 'image'}. ${item.tierId ? `In tier ${item.tierId}` : 'In item pool'}. Press Space or Enter to select.`}
                 draggable={true}
-                onClick={() => handlers.handleItemClick(item.id)}
+                onClick={() => handlers.handleItemClick(item.id, item.tierId)}
                 onDragStart={(e) => handlers.handleItemDragStart(e, item.id)}
                 onDragEnter={(e) => handlers.handleItemDragEnter(e, item.id, item.tierId)}
                 onDragOver={(e) => handlers.handleItemDragOver(e, item.id, item.tierId)}
                 onDragLeave={(e) => handlers.handleItemDragLeave(e, item.id)}
                 onDrop={(e) => handlers.handleItemDrop(e, item.tierId, item.id)}
                 onDragEnd={handlers.cleanupDragStates}
-                onTouchStart={(e) => handlers.handleItemTouchStart(e, item.id)}
                 className={`relative z-10 cursor-grab active:cursor-grabbing
                             ${draggedItemId === item.id ? 'opacity-30' : ''}
-                            ${selectedItemId === item.id ? 'keyboard-selected' : ''}`}
+                            ${selectedItemId === item.id ? 'keyboard-selected' : ''}
+                            ${mobileSelectedItem === item.id ? 'mobile-selected-item' : ''}`}
                 style={{ width: `${itemWidth}px`, height: `${itemHeight}px` }}
             >
                 <div
@@ -188,7 +194,7 @@
         ));
 
         const TierRow = ({ tier, items, theme, dragState, handlers, itemProps, index, totalTiers, deleteMode, selectedTierId }) => {
-            const { draggedTierId, draggedOverTierRowId, draggedOverTierAreaId, draggedItemId, draggedOverItemId, selectedItemId } = dragState;
+            const { draggedTierId, draggedOverTierRowId, draggedOverTierAreaId, draggedItemId, draggedOverItemId, selectedItemId, mobileSelectedItem } = dragState;
             const tierItems = tier.items.map(itemId => items.find(i => i.id === itemId)).filter(Boolean);
             const minTierHeight = itemProps.itemHeight + 16; // itemHeight + p-2 (8px top + 8px bottom)
 
@@ -222,6 +228,7 @@
                     </div>
                     <div
                         data-droptarget-tier-id={tier.id}
+                        onClick={() => handlers.handleTierAreaClick(tier.id)}
                         onDragEnter={(e) => handlers.handleTierAreaDragEnter(e, tier.id)}
                         onDragOver={(e) => handlers.handleTierAreaDragOver(e, tier.id)}
                         onDragLeave={(e) => handlers.handleTierAreaDragLeave(e, tier.id)}
@@ -230,14 +237,14 @@
                             ${draggedOverTierAreaId === tier.id && draggedItemId && !draggedOverItemId ? 'drag-over-tier-area' : ''}`}
                         aria-label={`Tier ${tier.value} content area`}
                     >
-                        {tierItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} selectedItemId={selectedItemId} />)}
+                        {tierItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} selectedItemId={selectedItemId} mobileSelectedItem={mobileSelectedItem} />)}
                     </div>
                 </div>
             );
         };
 
         const ItemPool = ({ items, itemPoolTitle, setItemPoolTitle, theme, dragState, handlers, itemProps, deleteMode, poolPosition, onTogglePosition }) => {
-            const { draggedOverTierAreaId, draggedItemId, draggedOverItemId, selectedItemId } = dragState;
+            const { draggedOverTierAreaId, draggedItemId, draggedOverItemId, selectedItemId, mobileSelectedItem } = dragState;
             const unassignedItems = items.filter(item => item.tierId === null);
 
             const isSideLayout = poolPosition === 'right';
@@ -245,6 +252,7 @@
             return (
                 <div
                     data-droptarget-tier-id="null"
+                    onClick={() => handlers.handleTierAreaClick(null)}
                     onDragEnter={(e) => handlers.handleTierAreaDragEnter(e, null)}
                     onDragOver={(e) => handlers.handleTierAreaDragOver(e, null)}
                     onDragLeave={(e) => handlers.handleTierAreaDragLeave(e, null)}
@@ -264,7 +272,7 @@
                         />
                     </div>
                     <div className={`flex flex-wrap gap-2 justify-center sm:justify-start flex-grow ${isSideLayout ? 'overflow-y-auto p-2' : 'min-h-[100px]'}`}>
-                        {unassignedItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} selectedItemId={selectedItemId} />)}
+                        {unassignedItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} selectedItemId={selectedItemId} mobileSelectedItem={mobileSelectedItem} />)}
                     </div>
                     <div className="absolute bottom-4 right-4 flex gap-2">
                          { window.innerWidth >= 1280 && 
@@ -753,7 +761,9 @@
             const [showConfiguration, setShowConfiguration] = useState(true);
             const [showLogs, setShowLogs] = useState(false);
             const [showCommandsPopover, setShowCommandsPopover] = useState(false);
-            const [touchDragGhost, setTouchDragGhost] = useState(null);
+
+            // Mobile tap-to-move state
+            const [mobileSelectedItem, setMobileSelectedItem] = useState(null);
 
             // Layout state
             const [poolPosition, setPoolPosition] = useState('bottom');
@@ -1057,10 +1067,11 @@
                 const unassignedItems = items.filter(item => item.tierId === null);
                 if (unassignedItems.length > 0) {
                     const firstItemId = unassignedItems[0].id;
-                    handleItemClick(firstItemId);
+                    // For keyboard nav, we use the other selection state
+                    setSelectedItemId(firstItemId);
                     lastManuallySelectedId.current = firstItemId;
                 }
-            }, [items, handleItemClick]);
+            }, [items]);
 
             const handlePasteItems = () => {
                 const text = pasteItemsRef.current.value.trim(); if (!text) { addLog("Paste area empty.", "warning"); return; }
@@ -1144,7 +1155,7 @@
                 });
             }, [tiers, itemPoolTitle]);
 
-            const cleanupDragStates = () => { setDraggedItemId(null); setDraggedTierId(null); setDraggedOverItemId(null); setDraggedOverTierRowId(null); setDraggedOverTierAreaId(null); setTouchDragGhost(null); };
+            const cleanupDragStates = () => { setDraggedItemId(null); setDraggedTierId(null); setDraggedOverItemId(null); setDraggedOverTierRowId(null); setDraggedOverTierAreaId(null); };
             const handleItemDragStart = (e, itemId) => { setDraggedItemId(itemId); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', itemId); };
             const handleItemDragEnter = (e, targetItemId, targetItemTierId) => { e.preventDefault(); e.stopPropagation(); if (draggedItemId && draggedItemId !== targetItemId) { setDraggedOverItemId(targetItemId); setDraggedOverTierAreaId(targetItemTierId); } };
             const handleItemDragOver = (e, targetItemId, targetItemTierId) => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'move'; if (draggedItemId && draggedItemId !== targetItemId) { setDraggedOverItemId(targetItemId); setDraggedOverTierAreaId(targetItemTierId); } };
@@ -1178,71 +1189,36 @@
                 cleanupDragStates();
             };
 
-            // --- TOUCH EVENT HANDLERS ---
-            const handleItemTouchStart = (e, itemId) => {
-                e.preventDefault();
-                const item = items.find(i => i.id === itemId);
-                if (!item) return;
-
-                setDraggedItemId(itemId);
-
-                const touch = e.touches[0];
-                setTouchDragGhost({
-                    itemId: itemId,
-                    x: touch.clientX,
-                    y: touch.clientY,
-                    item: item,
-                });
-            };
-
-            const handleTouchMove = (e) => {
-                if (!draggedItemId || !touchDragGhost) return;
-                e.preventDefault();
-
-                const touch = e.touches[0];
-                const { clientX, clientY } = touch;
-
-                setTouchDragGhost(prev => ({ ...prev, x: clientX, y: clientY }));
-
-                const ghostEl = document.getElementById('touch-drag-ghost');
-                if (ghostEl) ghostEl.style.display = 'none';
-
-                const targetEl = document.elementFromPoint(clientX, clientY);
-
-                if (ghostEl) ghostEl.style.display = 'flex';
-
-                if (!targetEl) return;
-
-                const tierArea = targetEl.closest('[data-droptarget-tier-id]');
-                const targetItemEl = targetEl.closest('[id^="item-"]');
-
-                if (tierArea) {
-                    const tierId = tierArea.dataset.droptargetTierId === 'null' ? null : tierArea.dataset.droptargetTierId;
-                    setDraggedOverTierAreaId(tierId);
-
-                    if (targetItemEl) {
-                        const targetItemId = targetItemEl.id.replace('item-', '');
-                        if (targetItemId !== draggedItemId) {
-                            setDraggedOverItemId(targetItemId);
-                        }
+            // --- TAP-TO-MOVE HANDLERS ---
+            const handleItemClick = (itemId, tierId) => {
+                if (mobileSelectedItem) {
+                    if (mobileSelectedItem === itemId) {
+                        // Tapped the same item again, so deselect it
+                        setMobileSelectedItem(null);
+                        addLog(`Item deselected for move.`, 'event');
                     } else {
-                        setDraggedOverItemId(null);
+                        // Tapped a different item, so place the selected item before it
+                        moveItem(mobileSelectedItem, tierId, itemId);
+                        setMobileSelectedItem(null);
+                        addLog(`Item moved.`, 'event');
                     }
                 } else {
-                    setDraggedOverTierAreaId(null);
-                    setDraggedOverItemId(null);
+                    // No item selected, so select this one for moving
+                    setMobileSelectedItem(itemId);
+                    addLog(`Item selected for move. Tap a tier or another item to place it.`, 'event');
                 }
             };
 
-            const handleTouchEnd = (e) => {
-                if (!draggedItemId) return;
-
-                moveItem(draggedItemId, draggedOverTierAreaId, draggedOverItemId);
-                cleanupDragStates();
+            const handleTierAreaClick = (tierId) => {
+                if (mobileSelectedItem) {
+                    moveItem(mobileSelectedItem, tierId, null); // Move to the end of the tier
+                    setMobileSelectedItem(null);
+                    addLog(`Item moved to tier.`, 'event');
+                }
             };
 
-
-            const handleItemClick = useCallback((itemId) => {
+            const handleKeyboardSelection = useCallback((itemId) => {
+                setMobileSelectedItem(null); // Clear mobile selection when using keyboard
                 setSelectedItemId(prevSelectedId => {
                     if (prevSelectedId === itemId) {
                         addLog(`Item deselected. Entering Navigation Mode.`, 'event');
@@ -1260,6 +1236,11 @@
             }, [items, addLog]);
 
             const handleTierClick = useCallback((tierId) => {
+                if (mobileSelectedItem) {
+                     moveItem(mobileSelectedItem, tierId, null);
+                     setMobileSelectedItem(null);
+                     return;
+                }
                 setSelectedTierId(prevSelectedId => {
                     if (prevSelectedId === tierId) {
                         addLog(`Tier deselected. Entering Navigation Mode.`, 'event');
@@ -1275,7 +1256,7 @@
                         return prevSelectedId;
                     }
                 });
-            }, [tiers, addLog]);
+            }, [tiers, addLog, mobileSelectedItem, moveItem]);
 
             const handleSelectNextItemInPool = useCallback(() => {
                 const unassignedItems = items.filter(item => item.tierId === null);
@@ -1291,10 +1272,10 @@
                     nextItem = unassignedItems[0];
                 }
                 if (nextItem) {
-                    handleItemClick(nextItem.id);
+                    handleKeyboardSelection(nextItem.id);
                     lastManuallySelectedId.current = nextItem.id;
                 }
-            }, [items, selectedItemId, handleItemClick, addLog]);
+            }, [items, selectedItemId, handleKeyboardSelection, addLog]);
 
 
             useEffect(() => {
@@ -1327,12 +1308,13 @@
                     if (e.key === ' ' || e.key === 'Enter') {
                         e.preventDefault();
                         addLog(`Action: Toggling selection for ${activeElement.id} with ${e.key}`, 'action');
-                        if (type === 'item') handleItemClick(id); else if (type === 'tierlabel') handleTierClick(id);
+                        if (type === 'item') handleKeyboardSelection(id); else if (type === 'tierlabel') handleTierClick(id);
                         return;
                     }
                     if (e.key === 'Escape') {
                         e.preventDefault();
-                        if (selectedItemId) { lastManuallySelectedId.current = selectedItemId; handleItemClick(selectedItemId); } 
+                        if (mobileSelectedItem) { setMobileSelectedItem(null); }
+                        else if (selectedItemId) { lastManuallySelectedId.current = selectedItemId; handleKeyboardSelection(selectedItemId); }
                         else if (selectedTierId) { lastMovedTierId.current = selectedTierId; handleTierClick(selectedTierId); }
                         return;
                     }
@@ -1392,7 +1374,7 @@
                 };
                 document.addEventListener('keydown', handleKeyDown);
                 return () => document.removeEventListener('keydown', handleKeyDown);
-            }, [selectedItemId, selectedTierId, items, tiers, moveItem, handleItemClick, handleTierClick, addLog, handleSelectNextItemInPool, toggleFullScreen, showCommandsPopover]);
+            }, [selectedItemId, selectedTierId, items, tiers, moveItem, handleKeyboardSelection, handleTierClick, addLog, handleSelectNextItemInPool, toggleFullScreen, showCommandsPopover, mobileSelectedItem]);
 
             const { focusableGrid, focusableMap } = useMemo(() => {
                 const grid = []; const map = {};
@@ -1471,10 +1453,10 @@
                 buttonText: 'text-white', 
                 sectionBg: darkMode ? 'bg-gray-800' : 'bg-white', 
             };
-            const dragState = { draggedItemId, draggedTierId, draggedOverItemId, draggedOverTierRowId, draggedOverTierAreaId, selectedItemId, selectedTierId };
+            const dragState = { draggedItemId, draggedTierId, draggedOverItemId, draggedOverTierRowId, draggedOverTierAreaId, selectedItemId, selectedTierId, mobileSelectedItem };
             const itemProps = { itemWidth, itemHeight, tierLabelWidth };
             const itemSetters = { setItemWidth, setItemHeight, setTierLabelWidth };
-            const allHandlers = { handleItemDragStart, handleItemTouchStart, handleItemDragEnter, handleItemDragOver, handleItemDragLeave, handleItemDrop, handleTierAreaDragEnter, handleTierAreaDragOver, handleTierAreaDragLeave, handleTierLabelDragStart, handleTierRowDragOver, handleTierRowDragLeave, handleTierDrop, handleDeleteItem, handleDeleteTier, startEditingTier, cleanupDragStates, addLog, handleAddTier, handleAddItem, handlePasteItems, handleResetAllItemsToPool, handleSaveEditedTier, cancelEditingTier, handleExportState, handleImportState, handleItemImageUpload, handleExportImage, handleItemClick, handleTierClick, handleClearAllData, handleNewTierList, handleExportAllStates, handleOpenTierList };
+            const allHandlers = { handleItemDragStart, handleItemDragEnter, handleItemDragOver, handleItemDragLeave, handleItemDrop, handleTierAreaDragEnter, handleTierAreaDragOver, handleTierAreaDragLeave, handleTierLabelDragStart, handleTierRowDragOver, handleTierRowDragLeave, handleTierDrop, handleDeleteItem, handleDeleteTier, startEditingTier, cleanupDragStates, addLog, handleAddTier, handleAddItem, handlePasteItems, handleResetAllItemsToPool, handleSaveEditedTier, cancelEditingTier, handleExportState, handleImportState, handleItemImageUpload, handleExportImage, handleItemClick, handleTierClick, handleKeyboardSelection, handleClearAllData, handleNewTierList, handleExportAllStates, handleOpenTierList, handleTierAreaClick };
             const uiState = { showConfiguration, editingTierId, showLogs };
             const uiSetters = { setShowConfiguration, setShowLogs, handleSelectFirstItemInPool };
             const data = { logs, standardColors };
@@ -1487,28 +1469,7 @@
             return (
                 <div
                     className={`min-h-screen font-sans transition-colors duration-300 ${theme.bg} ${theme.text}`}
-                    onTouchMove={handleTouchMove}
-                    onTouchEnd={handleTouchEnd}
                 >
-                    {touchDragGhost && (
-                        <div
-                            id="touch-drag-ghost"
-                            className={`fixed flex items-center justify-center rounded-sm shadow-lg z-50 pointer-events-none ${theme.itemBg} border ${theme.borderColor}`}
-                            style={{
-                                left: `${touchDragGhost.x}px`,
-                                top: `${touchDragGhost.y}px`,
-                                width: `${itemWidth}px`,
-                                height: `${itemHeight}px`,
-                                transform: 'translate(-50%, -50%)',
-                            }}
-                        >
-                             {touchDragGhost.item.type === 'image' ? (
-                                <img src={touchDragGhost.item.value} alt="ghost" className="w-full h-full object-contain" />
-                            ) : (
-                                <span className={`text-sm font-medium ${theme.inputText} text-center p-1 break-all`}>{touchDragGhost.item.value}</span>
-                            )}
-                        </div>
-                    )}
                     {showCommandsPopover && <CommandsPopover theme={theme} onClose={() => setShowCommandsPopover(false)} />}
                     {showClearDataModal && <ConfirmationModal theme={theme} onConfirm={confirmClearAllData} onCancel={() => setShowClearDataModal(false)} title="Clear All Data?" message="This will permanently delete all tiers and items from your browser's storage and cannot be undone."/>}
                     {showOpenModal && <OpenTierListModal theme={theme} onClose={() => setShowOpenModal(false)} addLog={addLog} />}
