@@ -704,7 +704,7 @@
                 // 2. Fallback to URL hash (for sharing)
                 const { data: urlData, error: urlError } = deserializeState(window.location.hash.substring(1));
                 if (urlData) {
-                     console.log("Loaded state from URL.");
+                       console.log("Loaded state from URL.");
                     return urlData;
                 }
                 if(urlError){
@@ -959,7 +959,7 @@
                                     importedCount++;
                                 }
                             });
-                             addLog(`Imported ${importedCount} tier lists from backup.`, 'action');
+                               addLog(`Imported ${importedCount} tier lists from backup.`, 'action');
                         } else {
                             throw new Error("Invalid file format.");
                         }
@@ -1144,7 +1144,7 @@
                 });
             }, [tiers, itemPoolTitle]);
 
-            const cleanupDragStates = () => { setDraggedItemId(null); setDraggedTierId(null); setDraggedOverItemId(null); setDraggedOverTierRowId(null); setDraggedOverTierAreaId(null); };
+            const cleanupDragStates = () => { setDraggedItemId(null); setDraggedTierId(null); setDraggedOverItemId(null); setDraggedOverTierRowId(null); setDraggedOverTierAreaId(null); setTouchDragGhost(null); };
             const handleItemDragStart = (e, itemId) => { setDraggedItemId(itemId); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', itemId); };
             const handleItemDragEnter = (e, targetItemId, targetItemTierId) => { e.preventDefault(); e.stopPropagation(); if (draggedItemId && draggedItemId !== targetItemId) { setDraggedOverItemId(targetItemId); setDraggedOverTierAreaId(targetItemTierId); } };
             const handleItemDragOver = (e, targetItemId, targetItemTierId) => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'move'; if (draggedItemId && draggedItemId !== targetItemId) { setDraggedOverItemId(targetItemId); setDraggedOverTierAreaId(targetItemTierId); } };
@@ -1177,6 +1177,70 @@
                 });
                 cleanupDragStates();
             };
+
+            // --- TOUCH EVENT HANDLERS ---
+            const handleItemTouchStart = (e, itemId) => {
+                e.preventDefault();
+                const item = items.find(i => i.id === itemId);
+                if (!item) return;
+
+                setDraggedItemId(itemId);
+
+                const touch = e.touches[0];
+                setTouchDragGhost({
+                    itemId: itemId,
+                    x: touch.clientX,
+                    y: touch.clientY,
+                    item: item,
+                });
+            };
+
+            const handleTouchMove = (e) => {
+                if (!draggedItemId || !touchDragGhost) return;
+                e.preventDefault();
+
+                const touch = e.touches[0];
+                const { clientX, clientY } = touch;
+
+                setTouchDragGhost(prev => ({ ...prev, x: clientX, y: clientY }));
+
+                const ghostEl = document.getElementById('touch-drag-ghost');
+                if (ghostEl) ghostEl.style.display = 'none';
+
+                const targetEl = document.elementFromPoint(clientX, clientY);
+
+                if (ghostEl) ghostEl.style.display = 'flex';
+
+                if (!targetEl) return;
+
+                const tierArea = targetEl.closest('[data-droptarget-tier-id]');
+                const targetItemEl = targetEl.closest('[id^="item-"]');
+
+                if (tierArea) {
+                    const tierId = tierArea.dataset.droptargetTierId === 'null' ? null : tierArea.dataset.droptargetTierId;
+                    setDraggedOverTierAreaId(tierId);
+
+                    if (targetItemEl) {
+                        const targetItemId = targetItemEl.id.replace('item-', '');
+                        if (targetItemId !== draggedItemId) {
+                            setDraggedOverItemId(targetItemId);
+                        }
+                    } else {
+                        setDraggedOverItemId(null);
+                    }
+                } else {
+                    setDraggedOverTierAreaId(null);
+                    setDraggedOverItemId(null);
+                }
+            };
+
+            const handleTouchEnd = (e) => {
+                if (!draggedItemId) return;
+
+                moveItem(draggedItemId, draggedOverTierAreaId, draggedOverItemId);
+                cleanupDragStates();
+            };
+
 
             const handleItemClick = useCallback((itemId) => {
                 setSelectedItemId(prevSelectedId => {
@@ -1410,7 +1474,7 @@
             const dragState = { draggedItemId, draggedTierId, draggedOverItemId, draggedOverTierRowId, draggedOverTierAreaId, selectedItemId, selectedTierId };
             const itemProps = { itemWidth, itemHeight, tierLabelWidth };
             const itemSetters = { setItemWidth, setItemHeight, setTierLabelWidth };
-            const allHandlers = { handleItemDragStart, handleItemDragEnter, handleItemDragOver, handleItemDragLeave, handleItemDrop, handleTierAreaDragEnter, handleTierAreaDragOver, handleTierAreaDragLeave, handleTierLabelDragStart, handleTierRowDragOver, handleTierRowDragLeave, handleTierDrop, handleDeleteItem, handleDeleteTier, startEditingTier, cleanupDragStates, addLog, handleAddTier, handleAddItem, handlePasteItems, handleResetAllItemsToPool, handleSaveEditedTier, cancelEditingTier, handleExportState, handleImportState, handleItemImageUpload, handleExportImage, handleItemClick, handleTierClick, handleClearAllData, handleNewTierList, handleExportAllStates, handleOpenTierList };
+            const allHandlers = { handleItemDragStart, handleItemTouchStart, handleItemDragEnter, handleItemDragOver, handleItemDragLeave, handleItemDrop, handleTierAreaDragEnter, handleTierAreaDragOver, handleTierAreaDragLeave, handleTierLabelDragStart, handleTierRowDragOver, handleTierRowDragLeave, handleTierDrop, handleDeleteItem, handleDeleteTier, startEditingTier, cleanupDragStates, addLog, handleAddTier, handleAddItem, handlePasteItems, handleResetAllItemsToPool, handleSaveEditedTier, cancelEditingTier, handleExportState, handleImportState, handleItemImageUpload, handleExportImage, handleItemClick, handleTierClick, handleClearAllData, handleNewTierList, handleExportAllStates, handleOpenTierList };
             const uiState = { showConfiguration, editingTierId, showLogs };
             const uiSetters = { setShowConfiguration, setShowLogs, handleSelectFirstItemInPool };
             const data = { logs, standardColors };
@@ -1421,7 +1485,30 @@
             const isSideLayout = poolPosition === 'right';
 
             return (
-                <div className={`min-h-screen font-sans transition-colors duration-300 ${theme.bg} ${theme.text}`}>
+                <div
+                    className={`min-h-screen font-sans transition-colors duration-300 ${theme.bg} ${theme.text}`}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                >
+                    {touchDragGhost && (
+                        <div
+                            id="touch-drag-ghost"
+                            className={`fixed flex items-center justify-center rounded-sm shadow-lg z-50 pointer-events-none ${theme.itemBg} border ${theme.borderColor}`}
+                            style={{
+                                left: `${touchDragGhost.x}px`,
+                                top: `${touchDragGhost.y}px`,
+                                width: `${itemWidth}px`,
+                                height: `${itemHeight}px`,
+                                transform: 'translate(-50%, -50%)',
+                            }}
+                        >
+                             {touchDragGhost.item.type === 'image' ? (
+                                <img src={touchDragGhost.item.value} alt="ghost" className="w-full h-full object-contain" />
+                            ) : (
+                                <span className={`text-sm font-medium ${theme.inputText} text-center p-1 break-all`}>{touchDragGhost.item.value}</span>
+                            )}
+                        </div>
+                    )}
                     {showCommandsPopover && <CommandsPopover theme={theme} onClose={() => setShowCommandsPopover(false)} />}
                     {showClearDataModal && <ConfirmationModal theme={theme} onConfirm={confirmClearAllData} onCancel={() => setShowClearDataModal(false)} title="Clear All Data?" message="This will permanently delete all tiers and items from your browser's storage and cannot be undone."/>}
                     {showOpenModal && <OpenTierListModal theme={theme} onClose={() => setShowOpenModal(false)} addLog={addLog} />}
