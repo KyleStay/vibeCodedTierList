@@ -56,12 +56,6 @@
             border-radius: 2px;
             box-shadow: 0 0 10px #4F46E5;
         }
-        .mobile-selected-item {
-            outline: 3px solid #818cf8 !important;
-            outline-offset: 2px;
-            border-radius: 2px;
-            box-shadow: 0 0 12px #818cf8;
-        }
     </style>
 </head>
 <body>
@@ -151,17 +145,7 @@
 
         // --- UI COMPONENTS ---
 
-        const DropZone = ({ onClick, itemHeight }) => (
-            <div
-                onClick={onClick}
-                className="flex-shrink-0 w-4 rounded bg-indigo-500/20 hover:bg-indigo-500/40 cursor-pointer transition-colors flex items-center justify-center"
-                style={{ height: `${itemHeight}px` }}
-            >
-                <div className="w-1 h-1/3 bg-indigo-400 rounded-full"></div>
-            </div>
-        );
-
-        const DraggableItem = memo(({ item, itemWidth, itemHeight, theme, draggedItemId, draggedOverItemId, handlers, addLog, deleteMode, selectedItemId, mobileSelectedItem }) => (
+        const DraggableItem = memo(({ item, itemWidth, itemHeight, theme, draggedItemId, draggedOverItemId, handlers, addLog, deleteMode, selectedItemId }) => (
             <div
                 id={`item-${item.id}`}
                 tabIndex={0}
@@ -176,10 +160,10 @@
                 onDragLeave={(e) => handlers.handleItemDragLeave(e, item.id)}
                 onDrop={(e) => handlers.handleItemDrop(e, item.tierId, item.id)}
                 onDragEnd={handlers.cleanupDragStates}
+                onTouchStart={(e) => handlers.handleTouchStart(e, item.id)}
                 className={`relative z-10 cursor-grab active:cursor-grabbing
                             ${draggedItemId === item.id ? 'opacity-30' : ''}
-                            ${selectedItemId === item.id ? 'keyboard-selected' : ''}
-                            ${mobileSelectedItem === item.id ? 'mobile-selected-item' : ''}`}
+                            ${selectedItemId === item.id ? 'keyboard-selected' : ''}`}
                 style={{ width: `${itemWidth}px`, height: `${itemHeight}px` }}
             >
                 <div
@@ -204,7 +188,7 @@
         ));
 
         const TierRow = ({ tier, items, theme, dragState, handlers, itemProps, index, totalTiers, deleteMode, selectedTierId }) => {
-            const { draggedTierId, draggedOverTierRowId, draggedOverTierAreaId, draggedItemId, draggedOverItemId, selectedItemId, mobileSelectedItem } = dragState;
+            const { draggedTierId, draggedOverTierRowId, draggedOverTierAreaId, draggedItemId, draggedOverItemId, selectedItemId } = dragState;
             const tierItems = tier.items.map(itemId => items.find(i => i.id === itemId)).filter(Boolean);
             const minTierHeight = itemProps.itemHeight + 16; // itemHeight + p-2 (8px top + 8px bottom)
 
@@ -238,7 +222,6 @@
                     </div>
                     <div
                         data-droptarget-tier-id={tier.id}
-                        onClick={() => handlers.handleTierAreaClick(tier.id)}
                         onDragEnter={(e) => handlers.handleTierAreaDragEnter(e, tier.id)}
                         onDragOver={(e) => handlers.handleTierAreaDragOver(e, tier.id)}
                         onDragLeave={(e) => handlers.handleTierAreaDragLeave(e, tier.id)}
@@ -247,24 +230,14 @@
                             ${draggedOverTierAreaId === tier.id && draggedItemId && !draggedOverItemId ? 'drag-over-tier-area' : ''}`}
                         aria-label={`Tier ${tier.value} content area`}
                     >
-                        {mobileSelectedItem && (
-                            <DropZone onClick={(e) => { e.stopPropagation(); handlers.handleDropZoneClick(tier.id, tierItems[0]?.id || null); }} itemHeight={itemProps.itemHeight} />
-                        )}
-                        {tierItems.map((item, index) => (
-                            <React.Fragment key={item.id}>
-                                <DraggableItem item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} selectedItemId={selectedItemId} mobileSelectedItem={mobileSelectedItem} />
-                                {mobileSelectedItem && mobileSelectedItem !== item.id && (
-                                     <DropZone onClick={(e) => { e.stopPropagation(); handlers.handleDropZoneClick(tier.id, tierItems[index + 1]?.id || null); }} itemHeight={itemProps.itemHeight} />
-                                )}
-                            </React.Fragment>
-                        ))}
+                        {tierItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} selectedItemId={selectedItemId} />)}
                     </div>
                 </div>
             );
         };
 
         const ItemPool = ({ items, itemPoolTitle, setItemPoolTitle, theme, dragState, handlers, itemProps, deleteMode, poolPosition, onTogglePosition }) => {
-            const { draggedOverTierAreaId, draggedItemId, draggedOverItemId, selectedItemId, mobileSelectedItem } = dragState;
+            const { draggedOverTierAreaId, draggedItemId, draggedOverItemId, selectedItemId } = dragState;
             const unassignedItems = items.filter(item => item.tierId === null);
 
             const isSideLayout = poolPosition === 'right';
@@ -272,7 +245,6 @@
             return (
                 <div
                     data-droptarget-tier-id="null"
-                    onClick={() => handlers.handleTierAreaClick(null)}
                     onDragEnter={(e) => handlers.handleTierAreaDragEnter(e, null)}
                     onDragOver={(e) => handlers.handleTierAreaDragOver(e, null)}
                     onDragLeave={(e) => handlers.handleTierAreaDragLeave(e, null)}
@@ -292,17 +264,7 @@
                         />
                     </div>
                     <div className={`flex flex-wrap gap-2 justify-center sm:justify-start flex-grow ${isSideLayout ? 'overflow-y-auto p-2' : 'min-h-[100px]'}`}>
-                        {mobileSelectedItem && (
-                            <DropZone onClick={(e) => { e.stopPropagation(); handlers.handleDropZoneClick(null, unassignedItems[0]?.id || null); }} itemHeight={itemProps.itemHeight} />
-                        )}
-                        {unassignedItems.map((item, index) => (
-                             <React.Fragment key={item.id}>
-                                <DraggableItem item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} selectedItemId={selectedItemId} mobileSelectedItem={mobileSelectedItem} />
-                                {mobileSelectedItem && mobileSelectedItem !== item.id &&(
-                                     <DropZone onClick={(e) => { e.stopPropagation(); handlers.handleDropZoneClick(null, unassignedItems[index + 1]?.id || null); }} itemHeight={itemProps.itemHeight} />
-                                )}
-                            </React.Fragment>
-                        ))}
+                        {unassignedItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} selectedItemId={selectedItemId} />)}
                     </div>
                     <div className="absolute bottom-4 right-4 flex gap-2">
                          { window.innerWidth >= 1280 && 
@@ -791,9 +753,9 @@
             const [showConfiguration, setShowConfiguration] = useState(true);
             const [showLogs, setShowLogs] = useState(false);
             const [showCommandsPopover, setShowCommandsPopover] = useState(false);
-
-            // Mobile tap-to-move state
-            const [mobileSelectedItem, setMobileSelectedItem] = useState(null);
+            const [touchDragGhost, setTouchDragGhost] = useState(null);
+            const touchStartCoords = useRef(null);
+            const isTouchDragging = useRef(false);
 
             // Layout state
             const [poolPosition, setPoolPosition] = useState('bottom');
@@ -1185,7 +1147,17 @@
                 });
             }, [tiers, itemPoolTitle]);
 
-            const cleanupDragStates = () => { setDraggedItemId(null); setDraggedTierId(null); setDraggedOverItemId(null); setDraggedOverTierRowId(null); setDraggedOverTierAreaId(null); };
+            const cleanupDragStates = () => {
+                setDraggedItemId(null);
+                setDraggedTierId(null);
+                setDraggedOverItemId(null);
+                setDraggedOverTierRowId(null);
+                setDraggedOverTierAreaId(null);
+                setTouchDragGhost(null);
+                touchStartCoords.current = null;
+                isTouchDragging.current = false;
+            };
+
             const handleItemDragStart = (e, itemId) => { setDraggedItemId(itemId); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', itemId); };
             const handleItemDragEnter = (e, targetItemId, targetItemTierId) => { e.preventDefault(); e.stopPropagation(); if (draggedItemId && draggedItemId !== targetItemId) { setDraggedOverItemId(targetItemId); setDraggedOverTierAreaId(targetItemTierId); } };
             const handleItemDragOver = (e, targetItemId, targetItemTierId) => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'move'; if (draggedItemId && draggedItemId !== targetItemId) { setDraggedOverItemId(targetItemId); setDraggedOverTierAreaId(targetItemTierId); } };
@@ -1219,36 +1191,82 @@
                 cleanupDragStates();
             };
 
-            // --- TAP-TO-MOVE HANDLERS ---
-            const handleItemClick = (itemId) => {
-                setMobileSelectedItem(prev => {
-                    if (prev === itemId) {
-                        addLog(`Item deselected for move.`, 'event');
-                        return null; // Deselect if tapping the same item
+            // --- TOUCH EVENT HANDLERS ---
+            const handleTouchStart = (e, itemId) => {
+                const touch = e.touches[0];
+                touchStartCoords.current = { x: touch.clientX, y: touch.clientY, itemId: itemId };
+                setDraggedItemId(itemId); // Tentatively set dragged item
+            };
+
+            const handleTouchMove = (e) => {
+                if (!touchStartCoords.current) return;
+
+                const touch = e.touches[0];
+                const { clientX, clientY } = touch;
+                const { x: startX, y: startY, itemId } = touchStartCoords.current;
+
+                const deltaX = clientX - startX;
+                const deltaY = clientY - startY;
+
+                // Start dragging only if moved more than a threshold and mostly horizontally
+                if (!isTouchDragging.current && Math.abs(deltaX) > 10 && Math.abs(deltaX) > Math.abs(deltaY)) {
+                    isTouchDragging.current = true;
+                    const item = items.find(i => i.id === itemId);
+                    if(item) {
+                        setTouchDragGhost({
+                            itemId: itemId,
+                            x: clientX,
+                            y: clientY,
+                            item: item,
+                        });
                     }
-                    addLog(`Item selected for move. Tap a space to place it.`, 'event');
-                    return itemId; // Select new item
-                });
-            };
+                }
 
-            const handleDropZoneClick = (targetTierId, beforeItemId) => {
-                if (mobileSelectedItem) {
-                    moveItem(mobileSelectedItem, targetTierId, beforeItemId);
-                    setMobileSelectedItem(null);
-                    addLog(`Item moved.`, 'event');
+                if (isTouchDragging.current) {
+                    e.preventDefault();
+                    setTouchDragGhost(prev => (prev ? { ...prev, x: clientX, y: clientY } : null));
+
+                    const ghostEl = document.getElementById('touch-drag-ghost');
+                    if (ghostEl) ghostEl.style.display = 'none';
+
+                    const targetEl = document.elementFromPoint(clientX, clientY);
+
+                    if (ghostEl) ghostEl.style.display = 'flex';
+
+                    if (!targetEl) return;
+
+                    const tierArea = targetEl.closest('[data-droptarget-tier-id]');
+                    const targetItemEl = targetEl.closest('[id^="item-"]');
+
+                    if (tierArea) {
+                        const tierId = tierArea.dataset.droptargetTierId === 'null' ? null : tierArea.dataset.droptargetTierId;
+                        setDraggedOverTierAreaId(tierId);
+
+                        if (targetItemEl) {
+                            const targetItemId = targetItemEl.id.replace('item-', '');
+                            if (targetItemId !== draggedItemId) {
+                                setDraggedOverItemId(targetItemId);
+                            }
+                        } else {
+                            setDraggedOverItemId(null);
+                        }
+                    } else {
+                        setDraggedOverTierAreaId(null);
+                        setDraggedOverItemId(null);
+                    }
                 }
             };
 
-            const handleTierAreaClick = (tierId) => {
-                if (mobileSelectedItem) {
-                    moveItem(mobileSelectedItem, tierId, null); // Move to the end of the tier
-                    setMobileSelectedItem(null);
-                    addLog(`Item moved to tier.`, 'event');
+            const handleTouchEnd = (e) => {
+                if (isTouchDragging.current && draggedItemId) {
+                    moveItem(draggedItemId, draggedOverTierAreaId, draggedOverItemId);
                 }
+                cleanupDragStates();
             };
 
-            const handleKeyboardSelection = useCallback((itemId) => {
-                setMobileSelectedItem(null); // Clear mobile selection when using keyboard
+
+            const handleItemClick = useCallback((itemId) => {
+                // This function is now primarily for keyboard accessibility
                 setSelectedItemId(prevSelectedId => {
                     if (prevSelectedId === itemId) {
                         addLog(`Item deselected. Entering Navigation Mode.`, 'event');
@@ -1266,11 +1284,6 @@
             }, [items, addLog]);
 
             const handleTierClick = useCallback((tierId) => {
-                if (mobileSelectedItem) {
-                     moveItem(mobileSelectedItem, tierId, null);
-                     setMobileSelectedItem(null);
-                     return;
-                }
                 setSelectedTierId(prevSelectedId => {
                     if (prevSelectedId === tierId) {
                         addLog(`Tier deselected. Entering Navigation Mode.`, 'event');
@@ -1286,7 +1299,7 @@
                         return prevSelectedId;
                     }
                 });
-            }, [tiers, addLog, mobileSelectedItem, moveItem]);
+            }, [tiers, addLog]);
 
             const handleSelectNextItemInPool = useCallback(() => {
                 const unassignedItems = items.filter(item => item.tierId === null);
@@ -1302,10 +1315,10 @@
                     nextItem = unassignedItems[0];
                 }
                 if (nextItem) {
-                    handleKeyboardSelection(nextItem.id);
+                    handleItemClick(nextItem.id);
                     lastManuallySelectedId.current = nextItem.id;
                 }
-            }, [items, selectedItemId, handleKeyboardSelection, addLog]);
+            }, [items, selectedItemId, handleItemClick, addLog]);
 
 
             useEffect(() => {
@@ -1338,13 +1351,12 @@
                     if (e.key === ' ' || e.key === 'Enter') {
                         e.preventDefault();
                         addLog(`Action: Toggling selection for ${activeElement.id} with ${e.key}`, 'action');
-                        if (type === 'item') handleKeyboardSelection(id); else if (type === 'tierlabel') handleTierClick(id);
+                        if (type === 'item') handleItemClick(id); else if (type === 'tierlabel') handleTierClick(id);
                         return;
                     }
                     if (e.key === 'Escape') {
                         e.preventDefault();
-                        if (mobileSelectedItem) { setMobileSelectedItem(null); }
-                        else if (selectedItemId) { lastManuallySelectedId.current = selectedItemId; handleKeyboardSelection(selectedItemId); }
+                        if (selectedItemId) { lastManuallySelectedId.current = selectedItemId; handleItemClick(selectedItemId); }
                         else if (selectedTierId) { lastMovedTierId.current = selectedTierId; handleTierClick(selectedTierId); }
                         return;
                     }
@@ -1404,7 +1416,7 @@
                 };
                 document.addEventListener('keydown', handleKeyDown);
                 return () => document.removeEventListener('keydown', handleKeyDown);
-            }, [selectedItemId, selectedTierId, items, tiers, moveItem, handleKeyboardSelection, handleTierClick, addLog, handleSelectNextItemInPool, toggleFullScreen, showCommandsPopover, mobileSelectedItem]);
+            }, [selectedItemId, selectedTierId, items, tiers, moveItem, handleItemClick, handleTierClick, addLog, handleSelectNextItemInPool, toggleFullScreen, showCommandsPopover]);
 
             const { focusableGrid, focusableMap } = useMemo(() => {
                 const grid = []; const map = {};
@@ -1483,10 +1495,10 @@
                 buttonText: 'text-white', 
                 sectionBg: darkMode ? 'bg-gray-800' : 'bg-white', 
             };
-            const dragState = { draggedItemId, draggedTierId, draggedOverItemId, draggedOverTierRowId, draggedOverTierAreaId, selectedItemId, selectedTierId, mobileSelectedItem };
+            const dragState = { draggedItemId, draggedTierId, draggedOverItemId, draggedOverTierRowId, draggedOverTierAreaId, selectedItemId, selectedTierId };
             const itemProps = { itemWidth, itemHeight, tierLabelWidth };
             const itemSetters = { setItemWidth, setItemHeight, setTierLabelWidth };
-            const allHandlers = { handleItemDragStart, handleItemDragEnter, handleItemDragOver, handleItemDragLeave, handleItemDrop, handleTierAreaDragEnter, handleTierAreaDragOver, handleTierAreaDragLeave, handleTierLabelDragStart, handleTierRowDragOver, handleTierRowDragLeave, handleTierDrop, handleDeleteItem, handleDeleteTier, startEditingTier, cleanupDragStates, addLog, handleAddTier, handleAddItem, handlePasteItems, handleResetAllItemsToPool, handleSaveEditedTier, cancelEditingTier, handleExportState, handleImportState, handleItemImageUpload, handleExportImage, handleItemClick, handleTierClick, handleKeyboardSelection, handleClearAllData, handleNewTierList, handleExportAllStates, handleOpenTierList, handleTierAreaClick, handleDropZoneClick };
+            const allHandlers = { handleItemDragStart, handleTouchStart, handleItemDragEnter, handleItemDragOver, handleItemDragLeave, handleItemDrop, handleTierAreaDragEnter, handleTierAreaDragOver, handleTierAreaDragLeave, handleTierLabelDragStart, handleTierRowDragOver, handleTierRowDragLeave, handleTierDrop, handleDeleteItem, handleDeleteTier, startEditingTier, cleanupDragStates, addLog, handleAddTier, handleAddItem, handlePasteItems, handleResetAllItemsToPool, handleSaveEditedTier, cancelEditingTier, handleExportState, handleImportState, handleItemImageUpload, handleExportImage, handleItemClick, handleTierClick, handleClearAllData, handleNewTierList, handleExportAllStates, handleOpenTierList };
             const uiState = { showConfiguration, editingTierId, showLogs };
             const uiSetters = { setShowConfiguration, setShowLogs, handleSelectFirstItemInPool };
             const data = { logs, standardColors };
@@ -1499,7 +1511,28 @@
             return (
                 <div
                     className={`min-h-screen font-sans transition-colors duration-300 ${theme.bg} ${theme.text}`}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
                 >
+                    {touchDragGhost && (
+                        <div
+                            id="touch-drag-ghost"
+                            className={`fixed flex items-center justify-center rounded-sm shadow-lg z-50 pointer-events-none ${theme.itemBg} border ${theme.borderColor}`}
+                            style={{
+                                left: `${touchDragGhost.x}px`,
+                                top: `${touchDragGhost.y}px`,
+                                width: `${itemWidth}px`,
+                                height: `${itemHeight}px`,
+                                transform: 'translate(-50%, -50%)',
+                            }}
+                        >
+                             {touchDragGhost.item.type === 'image' ? (
+                                <img src={touchDragGhost.item.value} alt="ghost" className="w-full h-full object-contain" />
+                            ) : (
+                                <span className={`text-sm font-medium ${theme.inputText} text-center p-1 break-all`}>{touchDragGhost.item.value}</span>
+                            )}
+                        </div>
+                    )}
                     {showCommandsPopover && <CommandsPopover theme={theme} onClose={() => setShowCommandsPopover(false)} />}
                     {showClearDataModal && <ConfirmationModal theme={theme} onConfirm={confirmClearAllData} onCancel={() => setShowClearDataModal(false)} title="Clear All Data?" message="This will permanently delete all tiers and items from your browser's storage and cannot be undone."/>}
                     {showOpenModal && <OpenTierListModal theme={theme} onClose={() => setShowOpenModal(false)} addLog={addLog} />}
