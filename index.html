@@ -160,10 +160,11 @@
                 onDragLeave={(e) => handlers.handleItemDragLeave(e, item.id)}
                 onDrop={(e) => handlers.handleItemDrop(e, item.tierId, item.id)}
                 onDragEnd={handlers.cleanupDragStates}
-                style={{ width: `${itemWidth}px`, height: `${itemHeight}px` }}
+                onTouchStart={(e) => handlers.handleItemTouchStart(e, item.id)}
                 className={`relative z-10 cursor-grab active:cursor-grabbing
                             ${draggedItemId === item.id ? 'opacity-30' : ''}
                             ${selectedItemId === item.id ? 'keyboard-selected' : ''}`}
+                style={{ width: `${itemWidth}px`, height: `${itemHeight}px` }}
             >
                 <div
                     className={`w-full h-full flex items-center justify-center overflow-hidden ${theme.itemBg} border ${theme.borderColor} rounded-sm shadow-sm transition-all duration-200
@@ -220,6 +221,7 @@
                         </>
                     </div>
                     <div
+                        data-droptarget-tier-id={tier.id}
                         onDragEnter={(e) => handlers.handleTierAreaDragEnter(e, tier.id)}
                         onDragOver={(e) => handlers.handleTierAreaDragOver(e, tier.id)}
                         onDragLeave={(e) => handlers.handleTierAreaDragLeave(e, tier.id)}
@@ -242,6 +244,7 @@
 
             return (
                 <div
+                    data-droptarget-tier-id="null"
                     onDragEnter={(e) => handlers.handleTierAreaDragEnter(e, null)}
                     onDragOver={(e) => handlers.handleTierAreaDragOver(e, null)}
                     onDragLeave={(e) => handlers.handleTierAreaDragLeave(e, null)}
@@ -750,6 +753,7 @@
             const [showConfiguration, setShowConfiguration] = useState(true);
             const [showLogs, setShowLogs] = useState(false);
             const [showCommandsPopover, setShowCommandsPopover] = useState(false);
+            const [touchDragGhost, setTouchDragGhost] = useState(null);
 
             // Layout state
             const [poolPosition, setPoolPosition] = useState('bottom');
