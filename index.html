@@ -14,7 +14,7 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            overflow-x: hidden; /* Prevent horizontal scrollbar from resize handle temporarily appearing */
+            overflow-x: hidden;
         }
         /* Custom styles for color input */
         input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
@@ -31,9 +31,14 @@
         .tier-row-drop-target { border-top: 3px dashed #4F46E5 !important; border-bottom: 3px dashed #4F46E5 !important; }
         
         /* Resize Handle Styles */
-        .resize-handle { position: absolute; right: -5px; top: 0; width: 10px; height: 100%; cursor: col-resize; z-index: 50; }
-        .resize-handle-visual { width: 4px; height: 100%; background-color: #4B5563; border-radius: 2px; position: absolute; right: 3px; }
-        .dark .resize-handle-visual { background-color: #6B7280; }
+        .resize-handle-x { position: absolute; right: -5px; top: 0; width: 10px; height: 100%; cursor: col-resize; z-index: 50; }
+        .resize-handle-x-visual { width: 4px; height: 100%; background-color: #4B5563; border-radius: 2px; position: absolute; right: 3px; }
+        .dark .resize-handle-x-visual { background-color: #6B7280; }
+
+        .resize-handle-y { position: absolute; left: 0; top: -5px; width: 100%; height: 10px; cursor: row-resize; z-index: 50; }
+        .resize-handle-y-visual { width: 100%; height: 4px; background-color: #4B5563; border-radius: 2px; position: absolute; top: 3px; }
+        .dark .resize-handle-y-visual { background-color: #6B7280; }
+
 
         /* Toggle Switch Styles */
         .toggle-checkbox:checked { right: 0; border-color: #4F46E5; }
@@ -78,6 +83,8 @@
         const XIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
         const ImageIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>;
         const HelpCircleIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
+        const ArrowDownToLineIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 17V3"/><path d="m6 11 6 6 6-6"/><path d="M19 21H5"/></svg>;
+        const ArrowRightToLineIcon = ({ size = 24, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M17 12H3"/><path d="m11 18 6-6-6-6"/><path d="M21 5v14"/></svg>;
 
         // --- STATE VALIDATION & SERIALIZATION ---
         const validateStateData = (parsedData) => {
@@ -174,9 +181,7 @@
                     onDragLeave={(e) => handlers.handleTierRowDragLeave(e, tier.id)}
                     onDrop={(e) => handlers.handleTierDrop(e, tier.id)}
                     className={`flex items-stretch min-h-[100px] transition-all duration-200
-                            ${draggedOverTierRowId === tier.id && draggedTierId && draggedTierId !== tier.id ? 'tier-row-drop-target' : ''}
-                            ${theme.borderColor} border-t
-                            ${index === totalTiers - 1 ? 'border-b' : ''}`}
+                            ${draggedOverTierRowId === tier.id && draggedTierId && draggedTierId !== tier.id ? 'tier-row-drop-target' : ''}`}
                 >
                     <div
                         id={`tier-label-${tier.id}`}
@@ -212,9 +217,11 @@
             );
         };
 
-        const ItemPool = ({ items, itemPoolTitle, setItemPoolTitle, theme, dragState, handlers, itemProps, deleteMode }) => {
+        const ItemPool = ({ items, itemPoolTitle, setItemPoolTitle, theme, dragState, handlers, itemProps, deleteMode, poolPosition, onTogglePosition }) => {
             const { draggedOverTierAreaId, draggedItemId, draggedOverItemId, selectedItemId } = dragState;
             const unassignedItems = items.filter(item => item.tierId === null);
+
+            const isSideLayout = poolPosition === 'right';
 
             return (
                 <div
@@ -222,8 +229,9 @@
                     onDragOver={(e) => handlers.handleTierAreaDragOver(e, null)}
                     onDragLeave={(e) => handlers.handleTierAreaDragLeave(e, null)}
                     onDrop={(e) => handlers.handleItemDrop(e, null, null)}
-                    className={`relative p-4 min-h-[150px] flex flex-col w-full flex-grow ${theme.containerBg} ${theme.borderColor}
-                            ${draggedOverTierAreaId === null && draggedItemId ? 'drag-over-tier-area' : ''}`}
+                    className={`relative p-4 flex flex-col ${theme.containerBg}
+                            ${draggedOverTierAreaId === null && draggedItemId ? 'drag-over-tier-area' : ''}
+                            ${isSideLayout ? 'h-full' : 'min-h-[150px] w-full'}`}
                     aria-label="Item Pool area"
                 >
                     <div className={`text-xl font-semibold ${theme.text} mb-3 flex items-center justify-center gap-2`}>
@@ -235,10 +243,17 @@
                             aria-label="Item pool title"
                         />
                     </div>
-                    <div className="flex flex-wrap gap-2 justify-center sm:justify-start flex-grow min-h-[100px]">
+                    <div className={`flex flex-wrap gap-2 justify-center sm:justify-start flex-grow ${isSideLayout ? 'overflow-y-auto' : 'min-h-[100px]'}`}>
                         {unassignedItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} selectedItemId={selectedItemId} />)}
                     </div>
-                    <button onClick={handlers.handleResetAllItemsToPool} className={`absolute bottom-4 right-4 w-12 h-12 rounded-full shadow-lg flex items-center justify-center ${theme.darkMode ? 'bg-red-700 hover:bg-red-800' : 'bg-red-500 hover:bg-red-600'} ${theme.buttonText}`} aria-label="Reset all items to pool"><RotateCcwIcon size={24}/></button>
+                    <div className="absolute bottom-4 right-4 flex gap-2">
+                         { window.innerWidth >= 1280 &&
+                            <button onClick={onTogglePosition} className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center ${theme.darkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-400 hover:bg-gray-500'} ${theme.buttonText}`} aria-label={isSideLayout ? "Move item pool to bottom" : "Move item pool to right"}>
+                                {isSideLayout ? <ArrowDownToLineIcon size={24} /> : <ArrowRightToLineIcon size={24} />}
+                            </button>
+                        }
+                        <button onClick={handlers.handleResetAllItemsToPool} className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center ${theme.darkMode ? 'bg-red-700 hover:bg-red-800' : 'bg-red-500 hover:bg-red-600'} ${theme.buttonText}`} aria-label="Reset all items to pool"><RotateCcwIcon size={24}/></button>
+                    </div>
                 </div>
             );
         };
@@ -275,7 +290,7 @@
                     aria-labelledby="commands-title"
                 >
                     <div
-                        className={`relative w-full max-w-lg p-6 rounded-lg shadow-xl border ${theme.containerBg} ${theme.borderColor}`}
+                        className={`relative w-full max-w-lg p-6 rounded-sm shadow-xl ${theme.containerBg}`}
                         onClick={(e) => e.stopPropagation()}
                     >
                         <button
@@ -307,7 +322,7 @@
 
         const ConfigurationPanel = ({ theme, uiState, uiSetters, data, dataHandlers, editState, editSetters, refs, itemProps, itemSetters, deleteMode, setDeleteMode, setContainerWidth, toggleFullScreen, setDarkMode, isFullscreen, darkMode }) => {
             const { showConfiguration, editingTierId, showLogs } = uiState;
-            const { setShowConfiguration, setShowLogs } = uiSetters;
+            const { setShowConfiguration, setShowLogs, handleSelectFirstItemInPool } = uiSetters;
             const { logs, standardColors } = data;
             const { handleAddTier, handleAddItem, handlePasteItems, handleSaveEditedTier, cancelEditingTier, addLog } = dataHandlers;
             const { editingTierLabel, editingTierColor, newTierColor } = editState;
@@ -366,156 +381,166 @@
                 }
             };
 
+            const handleConfigToggle = () => {
+                if (showConfiguration) { // If it's currently open and about to close
+                    handleSelectFirstItemInPool();
+                    window.scrollTo(0, 0);
+                }
+                setShowConfiguration(!showConfiguration);
+            }
+
             return (
-                <div className={`${theme.containerBg} p-4 w-full ${theme.borderColor} border-t`}>
-                    <h2 className={`text-2xl font-bold ${theme.text} mb-4 text-center flex items-center justify-center gap-2`}>
-                        <SettingsIcon size={24} /> Configuration
-                        <button onClick={() => setShowConfiguration(!showConfiguration)} className={`p-1 rounded-full ${theme.darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-300 hover:bg-gray-400'}`} aria-expanded={showConfiguration}> {showConfiguration ? <ChevronUpIcon size={20} /> : <ChevronDownIcon size={20} />} </button>
-                    </h2>
-                    {showConfiguration && (
-                        <>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                                {/* General Settings */}
-                                <div className={`${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor} md:col-span-2 lg:col-span-3`}>
-                                    <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-purple-300':'text-purple-600'} mb-3 flex items-center gap-2`}> <SettingsIcon size={20}/> General Settings</h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-                                        <button onClick={() => setContainerWidth(window.innerWidth)} className={`w-full py-2 rounded-sm shadow-sm ${theme.buttonSecondaryBg} ${theme.buttonText} flex items-center justify-center gap-2`}>
-                                            Fit to Screen
-                                        </button>
-                                        <button onClick={toggleFullScreen} className={`w-full py-2 rounded-sm shadow-sm ${theme.buttonSecondaryBg} ${theme.buttonText} flex items-center justify-center gap-2`}>
-                                            {isFullscreen ? <MinimizeIcon size={20} /> : <MaximizeIcon size={20} />}
-                                            {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-                                        </button>
-                                        <button onClick={() => setDarkMode(!darkMode)} className={`w-full py-2 rounded-sm shadow-sm ${theme.buttonSecondaryBg} ${theme.buttonText} flex items-center justify-center gap-2`}>
-                                            {darkMode ? <SunIcon size={20} /> : <MoonIcon size={20} />}
-                                            {darkMode ? "Light Mode" : "Dark Mode"}
-                                        </button>
-                                    </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end pt-4 border-t border-gray-200 dark:border-gray-700">
-                                        <div>
-                                            <label htmlFor="tierLabelWidth" className={`block text-sm font-medium ${theme.inputText}`}>Category Width (px)</label>
-                                            <input type="number" id="tierLabelWidth" value={localTierLabelWidth} onChange={e => setLocalTierLabelWidth(e.target.value)} onKeyDown={handleKeyDown} className={`mt-1 p-2 w-full border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                <div className={`${theme.bg} p-1`}>
+                    <div className={`${theme.containerBg} p-4`}>
+                        <h2 className={`text-2xl font-bold ${theme.text} mb-4 text-center flex items-center justify-center gap-2`}>
+                            <SettingsIcon size={24} /> Configuration
+                            <button onClick={handleConfigToggle} className={`p-1 rounded-full ${theme.darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-300 hover:bg-gray-400'}`} aria-expanded={showConfiguration}> {showConfiguration ? <ChevronUpIcon size={20} /> : <ChevronDownIcon size={20} />} </button>
+                        </h2>
+                        {showConfiguration && (
+                            <>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1">
+                                    {/* General Settings */}
+                                    <div className={`${theme.sectionBg} p-3 rounded-sm md:col-span-2 lg:col-span-3`}>
+                                        <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-purple-300':'text-purple-600'} mb-3 flex items-center gap-2`}> <SettingsIcon size={20}/> General Settings</h3>
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                                            <button onClick={() => setContainerWidth(window.innerWidth)} className={`w-full py-2 rounded-sm shadow-sm ${theme.buttonSecondaryBg} ${theme.buttonText} flex items-center justify-center gap-2`}>
+                                                Fit to Screen
+                                            </button>
+                                            <button onClick={toggleFullScreen} className={`w-full py-2 rounded-sm shadow-sm ${theme.buttonSecondaryBg} ${theme.buttonText} flex items-center justify-center gap-2`}>
+                                                {isFullscreen ? <MinimizeIcon size={20} /> : <MaximizeIcon size={20} />}
+                                                {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                                            </button>
+                                            <button onClick={() => setDarkMode(!darkMode)} className={`w-full py-2 rounded-sm shadow-sm ${theme.buttonSecondaryBg} ${theme.buttonText} flex items-center justify-center gap-2`}>
+                                                {darkMode ? <SunIcon size={20} /> : <MoonIcon size={20} />}
+                                                {darkMode ? "Light Mode" : "Dark Mode"}
+                                            </button>
                                         </div>
-                                        <div>
-                                            <label htmlFor="itemWidth" className={`block text-sm font-medium ${theme.inputText}`}>Item Width (px)</label>
-                                            <input type="number" id="itemWidth" value={localWidth} onChange={e => setLocalWidth(e.target.value)} onKeyDown={handleKeyDown} className={`mt-1 p-2 w-full border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
-                                        </div>
-                                        <div>
-                                            <label htmlFor="itemHeight" className={`block text-sm font-medium ${theme.inputText}`}>Item Height (px)</label>
-                                            <input type="number" id="itemHeight" value={localHeight} onChange={e => setLocalHeight(e.target.value)} onKeyDown={handleKeyDown} className={`mt-1 p-2 w-full border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
-                                        </div>
-                                        <div className="sm:col-span-2 lg:col-span-3 mt-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <button onClick={handleSizeUpdate} className={`w-full py-2 rounded-sm shadow-sm ${theme.buttonSecondaryBg} ${theme.buttonText}`}>Update Sizes</button>
-                                            <div className="flex justify-center items-center">
-                                                <label htmlFor="deleteModeToggle" className={`text-sm font-medium ${theme.inputText} mr-3`}>Delete Mode</label>
-                                                <div className="relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
-                                                    <input type="checkbox" name="toggle" id="deleteModeToggle" checked={deleteMode} onChange={() => setDeleteMode(!deleteMode)} className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
-                                                    <label htmlFor="deleteModeToggle" className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end pt-4 border-t border-gray-200 dark:border-gray-700">
+                                            <div>
+                                                <label htmlFor="tierLabelWidth" className={`block text-sm font-medium ${theme.inputText}`}>Category Width (px)</label>
+                                                <input type="number" id="tierLabelWidth" value={localTierLabelWidth} onChange={e => setLocalTierLabelWidth(e.target.value)} onKeyDown={handleKeyDown} className={`mt-1 p-2 w-full border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                                            </div>
+                                            <div>
+                                                <label htmlFor="itemWidth" className={`block text-sm font-medium ${theme.inputText}`}>Item Width (px)</label>
+                                                <input type="number" id="itemWidth" value={localWidth} onChange={e => setLocalWidth(e.target.value)} onKeyDown={handleKeyDown} className={`mt-1 p-2 w-full border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                                            </div>
+                                            <div>
+                                                <label htmlFor="itemHeight" className={`block text-sm font-medium ${theme.inputText}`}>Item Height (px)</label>
+                                                <input type="number" id="itemHeight" value={localHeight} onChange={e => setLocalHeight(e.target.value)} onKeyDown={handleKeyDown} className={`mt-1 p-2 w-full border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                                            </div>
+                                            <div className="sm:col-span-2 lg:col-span-3 mt-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <button onClick={handleSizeUpdate} className={`w-full py-2 rounded-sm shadow-sm ${theme.buttonSecondaryBg} ${theme.buttonText}`}>Update Sizes</button>
+                                                <div className="flex justify-center items-center">
+                                                    <label htmlFor="deleteModeToggle" className={`text-sm font-medium ${theme.inputText} mr-3`}>Delete Mode</label>
+                                                    <div className="relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
+                                                        <input type="checkbox" name="toggle" id="deleteModeToggle" checked={deleteMode} onChange={() => setDeleteMode(!deleteMode)} className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                                                        <label htmlFor="deleteModeToggle" className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                                {/* Edit/Create Tier */}
-                                {editingTierId ? (
-                                    <div className={`${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor}`}>
-                                        <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-indigo-300':'text-indigo-600'} mb-2 flex items-center gap-2`}> <PencilIcon size={20}/> Edit Tier</h3>
-                                        <input type="text" value={editingTierLabel} onChange={e=>setEditingTierLabel(e.target.value)} placeholder="Label" className={`w-full p-2 mb-2 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
-                                        <div className="flex items-center gap-2 mb-2"> {standardColors.map(c=><button key={c} onClick={()=>setEditingTierColor(c)} className={`w-7 h-7 rounded-full border-2 ${editingTierColor===c?(theme.darkMode?'border-white':'border-black'):'border-transparent'}`} style={{backgroundColor:c}} aria-label={`Set color to ${c}`}/>)} </div>
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <input type="color" value={editingTierColor} onChange={e=>setEditingTierColor(e.target.value)} className={`w-9 h-9 rounded-sm ${theme.darkMode?'border-gray-600':'border-gray-400'} border`} aria-label="Custom color picker"/>
-                                            <input type="text" value={editingTierColor} onChange={e=>handleHexColorChange(e,true)} placeholder="#hex" className={`p-2 w-28 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`} aria-label="Hex color value"/>
+                                    {/* Edit/Create Tier */}
+                                    {editingTierId ? (
+                                        <div className={`${theme.sectionBg} p-3 rounded-sm`}>
+                                            <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-indigo-300':'text-indigo-600'} mb-2 flex items-center gap-2`}> <PencilIcon size={20}/> Edit Tier</h3>
+                                            <input type="text" value={editingTierLabel} onChange={e=>setEditingTierLabel(e.target.value)} placeholder="Label" className={`w-full p-2 mb-2 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                                            <div className="flex items-center gap-2 mb-2"> {standardColors.map(c=><button key={c} onClick={()=>setEditingTierColor(c)} className={`w-7 h-7 rounded-full border-2 ${editingTierColor===c?(theme.darkMode?'border-white':'border-black'):'border-transparent'}`} style={{backgroundColor:c}} aria-label={`Set color to ${c}`}/>)} </div>
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <input type="color" value={editingTierColor} onChange={e=>setEditingTierColor(e.target.value)} className={`w-9 h-9 rounded-sm ${theme.darkMode?'border-gray-600':'border-gray-400'} border`} aria-label="Custom color picker"/>
+                                                <input type="text" value={editingTierColor} onChange={e=>handleHexColorChange(e,true)} placeholder="#hex" className={`p-2 w-28 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`} aria-label="Hex color value"/>
+                                            </div>
+                                            <div className="flex gap-2"><button onClick={handleSaveEditedTier} className={`flex-1 py-2 ${theme.darkMode?'bg-indigo-600 hover:bg-indigo-700':'bg-indigo-500 hover:bg-indigo-600'} ${theme.buttonText} rounded-sm`}>Save</button> <button onClick={cancelEditingTier} className={`flex-1 py-2 ${theme.buttonSecondaryBg} ${theme.buttonText} rounded-sm`}>Cancel</button></div>
                                         </div>
-                                        <div className="flex gap-2"><button onClick={handleSaveEditedTier} className={`flex-1 py-2 ${theme.darkMode?'bg-indigo-600 hover:bg-indigo-700':'bg-indigo-500 hover:bg-indigo-600'} ${theme.buttonText} rounded-sm`}>Save</button> <button onClick={cancelEditingTier} className={`flex-1 py-2 ${theme.buttonSecondaryBg} ${theme.buttonText} rounded-sm`}>Cancel</button></div>
-                                    </div>
-                                ) : (
-                                    <div className={`${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor}`}>
-                                        <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-blue-300':'text-blue-600'} mb-2 flex items-center gap-2`}> <PlusCircleIcon size={20}/> Create Tier</h3>
-                                        <input type="text" ref={newTierNameRef} placeholder="Label" className={`w-full p-2 mb-2 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
-                                        <div className="flex items-center gap-2 mb-2"> {standardColors.map(c=><button key={c} onClick={()=>setNewTierColor(c)} className={`w-7 h-7 rounded-full border-2 ${newTierColor===c?(theme.darkMode?'border-white':'border-black'):'border-transparent'}`} style={{backgroundColor:c}} aria-label={`Set color to ${c}`}/>)} </div>
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <input type="color" value={newTierColor} onChange={e=>setNewTierColor(e.target.value)} className={`w-9 h-9 rounded-sm ${theme.darkMode?'border-gray-600':'border-gray-400'} border`} aria-label="Custom color picker"/>
-                                            <input type="text" value={newTierColor} onChange={e=>handleHexColorChange(e,false)} placeholder="#hex" className={`p-2 w-28 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`} aria-label="Hex color value"/>
+                                    ) : (
+                                        <div className={`${theme.sectionBg} p-3 rounded-sm`}>
+                                            <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-blue-300':'text-blue-600'} mb-2 flex items-center gap-2`}> <PlusCircleIcon size={20}/> Create Tier</h3>
+                                            <input type="text" ref={newTierNameRef} placeholder="Label" className={`w-full p-2 mb-2 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                                            <div className="flex items-center gap-2 mb-2"> {standardColors.map(c=><button key={c} onClick={()=>setNewTierColor(c)} className={`w-7 h-7 rounded-full border-2 ${newTierColor===c?(theme.darkMode?'border-white':'border-black'):'border-transparent'}`} style={{backgroundColor:c}} aria-label={`Set color to ${c}`}/>)} </div>
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <input type="color" value={newTierColor} onChange={e=>setNewTierColor(e.target.value)} className={`w-9 h-9 rounded-sm ${theme.darkMode?'border-gray-600':'border-gray-400'} border`} aria-label="Custom color picker"/>
+                                                <input type="text" value={newTierColor} onChange={e=>handleHexColorChange(e,false)} placeholder="#hex" className={`p-2 w-28 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`} aria-label="Hex color value"/>
+                                            </div>
+                                            <button onClick={handleAddTier} className={`w-full py-2 ${theme.buttonPrimaryBg} ${theme.buttonText} rounded-sm`}>Add Tier</button>
                                         </div>
-                                        <button onClick={handleAddTier} className={`w-full py-2 ${theme.buttonPrimaryBg} ${theme.buttonText} rounded-sm`}>Add Tier</button>
+                                    )}
+                                    {/* Add Item */}
+                                    <div className={`${theme.sectionBg} p-3 rounded-sm`}>
+                                        <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-green-300':'text-green-600'} mb-3 flex items-center gap-2`}> <PlusCircleIcon size={20}/> Add Item</h3>
+                                        <div className="flex flex-col gap-3">
+                                            <input type="text" ref={newItemNameRef} placeholder="Name" className={`w-full p-2 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                                            <input type="text" ref={newItemImageUrlRef} placeholder="Image URL" className={`w-full p-2 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
+                                            <div className="flex flex-col gap-2 pt-1">
+                                                <label className={`w-full py-2 px-4 text-center rounded-sm cursor-pointer ${theme.darkMode?'bg-green-600/80 hover:bg-green-700/80':'bg-green-500/80 hover:bg-green-600/80'} ${theme.buttonText}`}>
+                                                    Select Image(s) From Device
+                                                    <input type="file" ref={newItemImageFileRef} accept="image/*" multiple onChange={dataHandlers.handleItemImageUpload} className="hidden"/>
+                                                </label>
+                                                <button onClick={handleAddItem} className={`w-full py-2 ${theme.darkMode?'bg-green-600 hover:bg-green-700':'bg-green-500 hover:bg-green-600'} ${theme.buttonText} rounded-sm`}>Add Text/URL Item</button>
+                                            </div>
+                                        </div>
                                     </div>
-                                )}
-                                {/* Add Item */}
-                                <div className={`${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor}`}>
-                                    <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-green-300':'text-green-600'} mb-3 flex items-center gap-2`}> <PlusCircleIcon size={20}/> Add Item</h3>
-                                    <div className="flex flex-col gap-3">
-                                        <input type="text" ref={newItemNameRef} placeholder="Name" className={`w-full p-2 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
-                                        <input type="text" ref={newItemImageUrlRef} placeholder="Image URL" className={`w-full p-2 border ${theme.borderColor} rounded-sm ${theme.inputBg} ${theme.inputText}`}/>
-                                        <div className="flex flex-col gap-2 pt-1">
-                                            <label className={`w-full py-2 px-4 text-center rounded-sm cursor-pointer ${theme.darkMode?'bg-green-600/80 hover:bg-green-700/80':'bg-green-500/80 hover:bg-green-600/80'} ${theme.buttonText}`}>
-                                                Select Image(s) From Device
-                                                <input type="file" ref={newItemImageFileRef} accept="image/*" multiple onChange={dataHandlers.handleItemImageUpload} className="hidden"/>
-                                            </label>
-                                            <button onClick={handleAddItem} className={`w-full py-2 ${theme.darkMode?'bg-green-600 hover:bg-green-700':'bg-green-500 hover:bg-green-600'} ${theme.buttonText} rounded-sm`}>Add Text/URL Item</button>
+                                    {/* Paste Items */}
+                                    <div className={`${theme.sectionBg} p-3 rounded-sm`}>
+                                        <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-yellow-300':'text-yellow-600'} mb-2 flex items-center gap-2`}> <ListIcon size={20}/> Paste Items</h3>
+                                        <textarea ref={pasteItemsRef} rows="5" placeholder="One per line" className={`w-full p-2 mb-3 border ${theme.borderColor} rounded-sm resize-y ${theme.inputBg} ${theme.inputText}`}></textarea>
+                                        <button onClick={handlePasteItems} className={`w-full py-2 ${theme.darkMode?'bg-yellow-600 hover:bg-yellow-700':'bg-yellow-500 hover:bg-yellow-600'} ${theme.buttonText} rounded-sm`}>Add Pasted</button>
+                                    </div>
+                                    {/* Data Management */}
+                                    <div className={`${theme.sectionBg} p-3 rounded-sm lg:col-span-3`}>
+                                        <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-cyan-300':'text-cyan-600'} mb-2 flex items-center gap-2`}>
+                                            <DownloadIcon size={20}/> Data Management
+                                        </h3>
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                            <input
+                                                type="file"
+                                                ref={importFileRef}
+                                                onChange={dataHandlers.handleImportState}
+                                                className="hidden"
+                                            />
+                                            <button
+                                                onClick={() => importFileRef.current.click()}
+                                                className={`flex-1 py-2 ${theme.darkMode?'bg-cyan-600 hover:bg-cyan-700':'bg-cyan-500 hover:bg-cyan-600'} ${theme.buttonText} rounded-sm flex items-center justify-center gap-2`}
+                                            >
+                                                <UploadIcon size={20} /> Import
+                                            </button>
+                                            <button
+                                                onClick={dataHandlers.handleExportState}
+                                                className={`flex-1 py-2 ${theme.darkMode?'bg-cyan-600 hover:bg-cyan-700':'bg-cyan-500 hover:bg-cyan-600'} ${theme.buttonText} rounded-sm flex items-center justify-center gap-2`}
+                                            >
+                                                <DownloadIcon size={20} /> Export
+                                            </button>
+                                            <button
+                                                onClick={dataHandlers.handleExportImage}
+                                                className={`flex-1 py-2 ${theme.darkMode?'bg-teal-600 hover:bg-teal-700':'bg-teal-500 hover:bg-teal-600'} ${theme.buttonText} rounded-sm flex items-center justify-center gap-2`}
+                                            >
+                                                <ImageIcon size={20} /> Export Image
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
-                                {/* Paste Items */}
-                                <div className={`${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor}`}>
-                                    <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-yellow-300':'text-yellow-600'} mb-2 flex items-center gap-2`}> <ListIcon size={20}/> Paste Items</h3>
-                                    <textarea ref={pasteItemsRef} rows="5" placeholder="One per line" className={`w-full p-2 mb-3 border ${theme.borderColor} rounded-sm resize-y ${theme.inputBg} ${theme.inputText}`}></textarea>
-                                    <button onClick={handlePasteItems} className={`w-full py-2 ${theme.darkMode?'bg-yellow-600 hover:bg-yellow-700':'bg-yellow-500 hover:bg-yellow-600'} ${theme.buttonText} rounded-sm`}>Add Pasted</button>
-                                </div>
-                                {/* Data Management */}
-                                <div className={`${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor} lg:col-span-3`}>
-                                    <h3 className={`text-xl font-semibold ${theme.darkMode ? 'text-cyan-300':'text-cyan-600'} mb-2 flex items-center gap-2`}>
-                                        <DownloadIcon size={20}/> Data Management
+                                {/* Logs */}
+                                <div className={`${theme.containerBg} p-0 w-full`}>
+                                    <h3 className={`text-xl font-semibold ${theme.text} mb-3 text-center flex items-center justify-center gap-2`}>
+                                        <FileTextIcon size={20} /> Application Logs
+                                        <button onClick={()=>setShowLogs(!showLogs)} className={`p-1 rounded-full ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`} aria-expanded={showLogs}>{showLogs?<ChevronUpIcon size={18}/>:<ChevronDownIcon size={18}/>}</button>
                                     </h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                        <input
-                                            type="file"
-                                            ref={importFileRef}
-                                            onChange={dataHandlers.handleImportState}
-                                            className="hidden"
-                                        />
-                                        <button
-                                            onClick={() => importFileRef.current.click()}
-                                            className={`flex-1 py-2 ${theme.darkMode?'bg-cyan-600 hover:bg-cyan-700':'bg-cyan-500 hover:bg-cyan-600'} ${theme.buttonText} rounded-sm flex items-center justify-center gap-2`}
-                                        >
-                                            <UploadIcon size={20} /> Import
-                                        </button>
-                                        <button
-                                            onClick={dataHandlers.handleExportState}
-                                            className={`flex-1 py-2 ${theme.darkMode?'bg-cyan-600 hover:bg-cyan-700':'bg-cyan-500 hover:bg-cyan-600'} ${theme.buttonText} rounded-sm flex items-center justify-center gap-2`}
-                                        >
-                                            <DownloadIcon size={20} /> Export
-                                        </button>
-                                        <button
-                                            onClick={dataHandlers.handleExportImage}
-                                            className={`flex-1 py-2 ${theme.darkMode?'bg-teal-600 hover:bg-teal-700':'bg-teal-500 hover:bg-teal-600'} ${theme.buttonText} rounded-sm flex items-center justify-center gap-2`}
-                                        >
-                                            <ImageIcon size={20} /> Export Image
-                                        </button>
-                                    </div>
+                                    {showLogs && (<>
+                                        <div className="flex gap-2 mb-3">
+                                            <button onClick={copyLogsToClipboard} className={`flex-1 py-1.5 px-3 rounded-sm ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>Copy</button>
+                                            <button onClick={selectAllLogs} className={`flex-1 py-1.5 px-3 rounded-sm ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>Select</button>
+                                        </div>
+                                        <div ref={logDisplayRef} className={`log-display-area flex flex-col gap-1 ${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor} max-h-60 overflow-y-auto text-left`}>
+                                            {logs.length === 0 ? <p className={`${theme.darkMode?'text-gray-400':'text-gray-600'} text-sm`}>No logs.</p> : logs.map((l,i)=>(
+                                                <p key={i} className={`text-xs font-mono ${l.type==='error'?(theme.darkMode?'text-red-400':'text-red-600'):l.type==='warning'?(theme.darkMode?'text-yellow-400':'text-yellow-600'):l.type==='action'?(theme.darkMode?'text-blue-300':'text-blue-600'):l.type==='event'?(theme.darkMode?'text-purple-300':'text-purple-600'):(theme.darkMode?'text-gray-300':'text-gray-700')}`}>
+                                                    <span className={`${theme.darkMode?'text-gray-500':'text-gray-400'}`}>{l.timestamp}</span> <span className={`font-bold ${l.type==='error'?(theme.darkMode?'text-red-500':'text-red-700'):l.type==='warning'?(theme.darkMode?'text-yellow-500':'text-yellow-700'):l.type==='action'?(theme.darkMode?'text-blue-400':'text-blue-700'):l.type==='event'?(theme.darkMode?'text-purple-400':'text-purple-700'):(theme.darkMode?'text-gray-400':'text-gray-500')}`}>[{l.type.toUpperCase()}]</span> {l.message}
+                                                </p>
+                                            ))}
+                                        </div></>
+                                    )}
                                 </div>
-                            </div>
-                            {/* Logs */}
-                            <div className={`${theme.containerBg} p-0 w-full ${theme.darkMode ? 'border-t border-gray-700' : 'border-t border-gray-300'} mt-4 pt-4`}>
-                                <h3 className={`text-xl font-semibold ${theme.text} mb-3 text-center flex items-center justify-center gap-2`}>
-                                    <FileTextIcon size={20} /> Application Logs
-                                    <button onClick={()=>setShowLogs(!showLogs)} className={`p-1 rounded-full ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`} aria-expanded={showLogs}>{showLogs?<ChevronUpIcon size={18}/>:<ChevronDownIcon size={18}/>}</button>
-                                </h3>
-                                {showLogs && (<>
-                                    <div className="flex gap-2 mb-3">
-                                        <button onClick={copyLogsToClipboard} className={`flex-1 py-1.5 px-3 rounded-sm ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>Copy</button>
-                                        <button onClick={selectAllLogs} className={`flex-1 py-1.5 px-3 rounded-sm ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>Select</button>
-                                    </div>
-                                    <div ref={logDisplayRef} className={`log-display-area flex flex-col gap-1 ${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor} max-h-60 overflow-y-auto text-left`}>
-                                        {logs.length === 0 ? <p className={`${theme.darkMode?'text-gray-400':'text-gray-600'} text-sm`}>No logs.</p> : logs.map((l,i)=>(
-                                            <p key={i} className={`text-xs font-mono ${l.type==='error'?(theme.darkMode?'text-red-400':'text-red-600'):l.type==='warning'?(theme.darkMode?'text-yellow-400':'text-yellow-600'):l.type==='action'?(theme.darkMode?'text-blue-300':'text-blue-600'):l.type==='event'?(theme.darkMode?'text-purple-300':'text-purple-600'):(theme.darkMode?'text-gray-300':'text-gray-700')}`}>
-                                                <span className={`${theme.darkMode?'text-gray-500':'text-gray-400'}`}>{l.timestamp}</span> <span className={`font-bold ${l.type==='error'?(theme.darkMode?'text-red-500':'text-red-700'):l.type==='warning'?(theme.darkMode?'text-yellow-500':'text-yellow-700'):l.type==='action'?(theme.darkMode?'text-blue-400':'text-blue-700'):l.type==='event'?(theme.darkMode?'text-purple-400':'text-purple-700'):(theme.darkMode?'text-gray-400':'text-gray-500')}`}>[{l.type.toUpperCase()}]</span> {l.message}
-                                            </p>
-                                        ))}
-                                    </div></>
-                                )}
-                            </div>
-                        </>
-                    )}
+                            </>
+                        )}
+                    </div>
                 </div>
             );
         };
@@ -541,15 +566,19 @@
             const [itemPoolTitle, setItemPoolTitle] = useState(initialData?.itemPoolTitle || 'Item Pool');
             const [itemWidth, setItemWidth] = useState(initialData?.itemWidth || 80);
             const [itemHeight, setItemHeight] = useState(initialData?.itemHeight || 80);
-            const [containerWidth, setContainerWidth] = useState(window.innerWidth);
             const [tierLabelWidth, setTierLabelWidth] = useState(initialData?.tierLabelWidth || 128);
             const [deleteMode, setDeleteMode] = useState(false);
             const [isFullscreen, setIsFullscreen] = useState(false);
             
-            const [isResizing, setIsResizing] = useState(false);
             const [showConfiguration, setShowConfiguration] = useState(true);
             const [showLogs, setShowLogs] = useState(false);
             const [showCommandsPopover, setShowCommandsPopover] = useState(false);
+
+            // Layout state
+            const [poolPosition, setPoolPosition] = useState('bottom');
+            const [manualPoolPosition, setManualPoolPosition] = useState(false);
+            const [tierListPanelWidth, setTierListPanelWidth] = useState(65); // Percentage
+            const [isResizing, setIsResizing] = useState(false);
 
             const [draggedItemId, setDraggedItemId] = useState(null);
             const [draggedTierId, setDraggedTierId] = useState(null);
@@ -571,23 +600,21 @@
             const newTierNameRef = useRef(null);
             const newItemNameRef = useRef(null); const newItemImageFileRef = useRef(null); const newItemImageUrlRef = useRef(null);
             const pasteItemsRef = useRef(null);
-            const appContainerRef = useRef(null); const resizeDragStartRef = useRef({ x: 0, width: 0 });
+            const appContainerRef = useRef(null);
             const importFileRef = useRef(null);
             const logDisplayRef = useRef(null);
             const tierListRef = useRef(null); // Ref for the element to capture
-            const isResizingRef = useRef(isResizing);
-            useEffect(() => { isResizingRef.current = isResizing; }, [isResizing]);
 
             const standardColors = ['#ff7f7f', '#ffbf7f', '#ffff7f', '#bfff7f', '#7fbfff', '#bf7fff', '#c0c0c0', '#404040'];
             
-            useEffect(() => { document.documentElement.classList.toggle('dark', darkMode); document.body.classList.toggle('bg-black', darkMode); document.body.classList.toggle('bg-gray-100', !darkMode); }, [darkMode]);
+            useEffect(() => { document.documentElement.classList.toggle('dark', darkMode); document.body.style.backgroundColor = darkMode ? '#000000' : '#f3f4f6'; }, [darkMode]);
 
             useEffect(() => {
-                const stateToSave = { tiers, items, tierListTitle, itemWidth, itemHeight, containerWidth, itemPoolTitle, tierLabelWidth };
+                const stateToSave = { tiers, items, tierListTitle, itemWidth, itemHeight, itemPoolTitle, tierLabelWidth };
                 const hashString = serializeState(stateToSave);
                 const id = setTimeout(() => { if (window.location.hash.substring(1) !== hashString) { window.location.hash = hashString; } }, 700);
                 return () => clearTimeout(id);
-            }, [tiers, items, tierListTitle, itemWidth, itemHeight, containerWidth, itemPoolTitle, tierLabelWidth]);
+            }, [tiers, items, tierListTitle, itemWidth, itemHeight, itemPoolTitle, tierLabelWidth]);
 
             useEffect(() => { if (initialDeserializedResult.error) { addLog(initialDeserializedResult.error.message, initialDeserializedResult.error.type); } }, [initialDeserializedResult.error, addLog]);
 
@@ -607,6 +634,28 @@
                 return () => document.removeEventListener('fullscreenchange', handleFullScreenChange);
             }, []);
 
+            // Handle responsive layout changes
+            useEffect(() => {
+                const handleResize = () => {
+                    if (!manualPoolPosition) {
+                        if (window.innerWidth >= 1280) {
+                            setPoolPosition('right');
+                        } else {
+                            setPoolPosition('bottom');
+                        }
+                    }
+                };
+                handleResize();
+                window.addEventListener('resize', handleResize);
+                return () => window.removeEventListener('resize', handleResize);
+            }, [manualPoolPosition]);
+
+            const handleTogglePosition = () => {
+                setPoolPosition(prev => prev === 'right' ? 'bottom' : 'right');
+                setManualPoolPosition(true);
+            };
+
+
             const generateId = useCallback(() => crypto.randomUUID(), []);
 
             // --- DATA HANDLERS ---
@@ -616,7 +665,7 @@
                     html2canvas(tierListRef.current, {
                         useCORS: true, // Important for external images
                         allowTaint: true,
-                        backgroundColor: darkMode ? '#111827' : '#ffffff', // Use theme background
+                        backgroundColor: darkMode ? '#000000' : '#ffffff', // Use theme background
                         scrollX: 0,
                         scrollY: -window.scrollY
                     }).then(canvas => {
@@ -636,7 +685,7 @@
             };
 
             const handleExportState = () => {
-                const stateToSave = { tiers, items, tierListTitle, itemPoolTitle, itemWidth, itemHeight, containerWidth, tierLabelWidth };
+                const stateToSave = { tiers, items, tierListTitle, itemPoolTitle, itemWidth, itemHeight, tierLabelWidth };
                 const jsonString = JSON.stringify(stateToSave, null, 2);
                 const blob = new Blob([jsonString], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
@@ -672,7 +721,6 @@
                         setItemPoolTitle(data.itemPoolTitle);
                         setItemWidth(data.itemWidth);
                         setItemHeight(data.itemHeight);
-                        setContainerWidth(data.containerWidth);
                         setTierLabelWidth(data.tierLabelWidth);
 
                         const firstUnassignedItem = data.items.find(item => item.tierId === null);
@@ -763,10 +811,21 @@
                 if (newItemImageUrlRef.current) newItemImageUrlRef.current.value = '';
             };
             
+            const handleSelectFirstItemInPool = useCallback(() => {
+                const unassignedItems = items.filter(item => item.tierId === null);
+                if (unassignedItems.length > 0) {
+                    const firstItemId = unassignedItems[0].id;
+                    handleItemClick(firstItemId);
+                    lastManuallySelectedId.current = firstItemId;
+                }
+            }, [items, handleItemClick]);
+
             const handlePasteItems = () => {
                 const text = pasteItemsRef.current.value.trim(); if (!text) { addLog("Paste area empty.", "warning"); return; }
                 const newItems = text.split('\n').map(l => ({ id: generateId(), type: 'name', value: l.trim(), tierId: null })).filter(i => i.value);
                 setItems(p => [...p, ...newItems]); addLog(`Pasted ${newItems.length} items.`, "info"); pasteItemsRef.current.value = '';
+                window.scrollTo(0, 0);
+                handleSelectFirstItemInPool();
             };
 
             const handleResetAllItemsToPool = () => {
@@ -1042,61 +1101,112 @@
 
              useEffect(() => { if (selectedItemId && document.activeElement?.id !== `item-${selectedItemId}`) { const el = document.getElementById(`item-${selectedItemId}`); if (el) el.focus(); } }, [selectedItemId]);
 
-            const handleResizeMouseDown = (e) => { e.preventDefault(); setIsResizing(true); resizeDragStartRef.current = { x: e.clientX, width: appContainerRef.current ? appContainerRef.current.offsetWidth : containerWidth }; };
-            const mouseMoveHandlerRef = useRef(); const mouseUpHandlerRef = useRef();
+            const handleResizeMouseDown = (e) => {
+                e.preventDefault();
+                setIsResizing(true);
+            };
+
             useEffect(() => {
-                mouseMoveHandlerRef.current = (e) => { if (!isResizingRef.current) return; const { x: initialX, width: initialWidth } = resizeDragStartRef.current; const newWidth = Math.max(600, Math.min(initialWidth + ((e.clientX - initialX) * 2), window.innerWidth)); setContainerWidth(newWidth); };
-                mouseUpHandlerRef.current = () => { if (isResizingRef.current) setIsResizing(false); };
-            });
-            useEffect(() => {
-                const handleMove = e => mouseMoveHandlerRef.current(e); const handleUp = () => mouseUpHandlerRef.current();
-                if (isResizing) { document.addEventListener('mousemove', handleMove); document.addEventListener('mouseup', handleUp); }
-                return () => { document.removeEventListener('mousemove', handleMove); document.removeEventListener('mouseup', handleUp); };
+                const handleMouseMove = (e) => {
+                    if (!isResizing) return;
+                    const containerRect = appContainerRef.current.getBoundingClientRect();
+                    const newWidthPercent = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+                    // Constrain the panel width between 50% and 80% for the tier list
+                    const constrainedWidth = Math.max(50, Math.min(80, newWidthPercent));
+                    setTierListPanelWidth(constrainedWidth);
+                };
+
+                const handleMouseUp = () => {
+                    setIsResizing(false);
+                };
+
+                if (isResizing) {
+                    window.addEventListener('mousemove', handleMouseMove);
+                    window.addEventListener('mouseup', handleMouseUp);
+                }
+
+                return () => {
+                    window.removeEventListener('mousemove', handleMouseMove);
+                    window.removeEventListener('mouseup', handleMouseUp);
+                };
             }, [isResizing]);
 
-            const theme = { darkMode, bg: darkMode ? 'bg-black' : 'bg-gray-100', text: darkMode ? 'text-gray-100' : 'text-gray-900', containerBg: darkMode ? 'bg-gray-900' : 'bg-white', itemBg: darkMode ? 'bg-gray-800' : 'bg-white', inputBg: darkMode ? 'bg-gray-700' : 'bg-gray-50', inputText: darkMode ? 'text-gray-200' : 'text-gray-800', placeholderText: darkMode ? 'placeholder-gray-400' : 'placeholder-gray-500', borderColor: darkMode ? 'border-gray-700' : 'border-gray-300', buttonPrimaryBg: darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600', buttonSecondaryBg: darkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-500 hover:bg-gray-600', buttonText: 'text-white', sectionBg: darkMode ? 'bg-gray-800' : 'bg-gray-50' };
+            const theme = {
+                darkMode,
+                bg: darkMode ? 'bg-black' : 'bg-gray-100',
+                text: darkMode ? 'text-gray-100' : 'text-gray-900',
+                containerBg: darkMode ? 'bg-gray-800' : 'bg-white',
+                itemBg: darkMode ? 'bg-gray-700' : 'bg-gray-50',
+                inputBg: darkMode ? 'bg-gray-700' : 'bg-gray-50',
+                inputText: darkMode ? 'text-gray-200' : 'text-gray-800',
+                placeholderText: darkMode ? 'placeholder-gray-400' : 'placeholder-gray-500',
+                borderColor: darkMode ? 'border-gray-600' : 'border-gray-300',
+                buttonPrimaryBg: darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600',
+                buttonSecondaryBg: darkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-500 hover:bg-gray-600',
+                buttonText: 'text-white',
+                sectionBg: darkMode ? 'bg-gray-800' : 'bg-white',
+            };
             const dragState = { draggedItemId, draggedTierId, draggedOverItemId, draggedOverTierRowId, draggedOverTierAreaId, selectedItemId, selectedTierId };
             const itemProps = { itemWidth, itemHeight, tierLabelWidth };
             const itemSetters = { setItemWidth, setItemHeight, setTierLabelWidth };
             const allHandlers = { handleItemDragStart, handleItemDragEnter, handleItemDragOver, handleItemDragLeave, handleItemDrop, handleTierAreaDragEnter, handleTierAreaDragOver, handleTierAreaDragLeave, handleTierLabelDragStart, handleTierRowDragOver, handleTierRowDragLeave, handleTierDrop, handleDeleteItem, handleDeleteTier, startEditingTier, cleanupDragStates, addLog, handleAddTier, handleAddItem, handlePasteItems, handleResetAllItemsToPool, handleSaveEditedTier, cancelEditingTier, handleExportState, handleImportState, handleItemImageUpload, handleExportImage, handleItemClick, handleTierClick };
             const uiState = { showConfiguration, editingTierId, showLogs };
-            const uiSetters = { setShowConfiguration, setShowLogs };
+            const uiSetters = { setShowConfiguration, setShowLogs, handleSelectFirstItemInPool };
             const data = { logs, standardColors };
             const editState = { editingTierLabel, editingTierColor, newTierColor };
             const editSetters = { setEditingTierLabel, setEditingTierColor, setNewTierColor };
             const refs = { newTierNameRef, newItemNameRef, newItemImageFileRef, newItemImageUrlRef, pasteItemsRef, importFileRef, logDisplayRef };
 
+            const isSideLayout = poolPosition === 'right';
+
             return (
-                <div className={`min-h-screen font-sans p-0 transition-colors duration-300 ${theme.bg} ${theme.text}`}>
+                <div className={`min-h-screen font-sans transition-colors duration-300 ${theme.bg} ${theme.text}`}>
                     {showCommandsPopover && <CommandsPopover theme={theme} onClose={() => setShowCommandsPopover(false)} />}
                     <div aria-live="assertive" style={{ position: 'absolute', width: '1px', height: '1px', padding: '0', margin: '-1px', overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: '0' }}>{announcement}</div>
-                    <div ref={appContainerRef} className="relative mx-auto flex flex-col min-h-screen max-w-full" style={{ width: `${containerWidth}px` }}>
 
-                        <button
-                            onClick={() => setShowCommandsPopover(true)}
-                            className={`absolute top-4 right-4 p-2 rounded-full z-20 ${theme.darkMode ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-500 hover:bg-gray-200 hover:text-black'}`}
-                            aria-label="Show keyboard commands"
-                        >
-                            <HelpCircleIcon size={28} />
-                        </button>
-
-                        <div ref={tierListRef}>
-                            <div className={`flex justify-center items-center p-4 ${theme.containerBg}`}>
-                                <input type="text" value={tierListTitle} onChange={(e) => setTierListTitle(e.target.value)} className={`text-3xl sm:text-4xl font-extrabold bg-transparent border-none focus:outline-none focus:ring-0 text-center w-full ${theme.text}`} aria-label="Tier list title"/>
-                            </div>
-                            <div className={`${theme.containerBg} w-full`}>
-                                {tiers.map((tier, index) => (
-                                    <TierRow key={tier.id} tier={tier} items={items} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} index={index} totalTiers={tiers.length} deleteMode={deleteMode} selectedTierId={selectedTierId} />
-                                ))}
-                            </div>
+                    <div ref={appContainerRef} className="mx-auto max-w-full flex flex-col gap-1">
+                        <div className={`relative ${theme.containerBg}`}>
+                             <button
+                                onClick={() => setShowCommandsPopover(true)}
+                                className={`absolute top-4 right-4 p-2 rounded-full z-20 ${theme.darkMode ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-500 hover:bg-gray-200 hover:text-black'}`}
+                                aria-label="Show keyboard commands"
+                            >
+                                <HelpCircleIcon size={28} />
+                            </button>
+                            <input type="text" value={tierListTitle} onChange={(e) => setTierListTitle(e.target.value)} className={`text-3xl sm:text-4xl font-extrabold bg-transparent border-none focus:outline-none focus:ring-0 text-center w-full p-4 ${theme.text}`} aria-label="Tier list title"/>
                         </div>
 
-                        <div className="flex flex-col gap-0 flex-grow">
-                            <ItemPool items={items} itemPoolTitle={itemPoolTitle} setItemPoolTitle={setItemPoolTitle} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} deleteMode={deleteMode} />
+                        <div className={`flex ${isSideLayout ? 'flex-row gap-1' : 'flex-col gap-1'}`}>
+                            <div
+                                className="tier-list-container"
+                                style={isSideLayout ? { width: `${tierListPanelWidth}%` } : { width: '100%' }}
+                            >
+                                <div ref={tierListRef} className="w-full flex flex-col gap-1">
+                                    {tiers.map((tier, index) => (
+                                        <TierRow key={tier.id} tier={tier} items={items} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} index={index} totalTiers={tiers.length} deleteMode={deleteMode} selectedTierId={selectedTierId} />
+                                    ))}
+                                </div>
+                                {!isSideLayout && (
+                                    <div className="pt-1">
+                                        <ItemPool items={items} itemPoolTitle={itemPoolTitle} setItemPoolTitle={setItemPoolTitle} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} deleteMode={deleteMode} poolPosition={poolPosition} onTogglePosition={handleTogglePosition} />
+                                    </div>
+                                )}
+                            </div>
+
+                            {isSideLayout && (
+                                <>
+                                    <div onMouseDown={handleResizeMouseDown} className="w-2 cursor-col-resize flex-shrink-0 bg-gray-500/20 hover:bg-blue-500/50 transition-colors"></div>
+                                    <div
+                                        className="item-pool-container flex-grow"
+                                        style={{ width: `${100 - tierListPanelWidth}%` }}
+                                    >
+                                        <ItemPool items={items} itemPoolTitle={itemPoolTitle} setItemPoolTitle={setItemPoolTitle} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} deleteMode={deleteMode} poolPosition={poolPosition} onTogglePosition={handleTogglePosition} />
+                                    </div>
+                                </>
+                            )}
                         </div>
 
-                        <ConfigurationPanel theme={theme} uiState={uiState} uiSetters={uiSetters} data={data} dataHandlers={allHandlers} editState={editState} editSetters={editSetters} refs={refs} itemProps={itemProps} itemSetters={itemSetters} deleteMode={deleteMode} setDeleteMode={setDeleteMode} setContainerWidth={setContainerWidth} toggleFullScreen={toggleFullScreen} setDarkMode={setDarkMode} isFullscreen={isFullscreen} darkMode={darkMode} />
-                        <div className="resize-handle" onMouseDown={handleResizeMouseDown}><div className="resize-handle-visual"></div></div>
+                        <ConfigurationPanel theme={theme} uiState={uiState} uiSetters={uiSetters} data={data} dataHandlers={allHandlers} editState={editState} editSetters={editSetters} refs={refs} itemProps={itemProps} itemSetters={itemSetters} deleteMode={deleteMode} setDeleteMode={setDeleteMode} setContainerWidth={() => {}} toggleFullScreen={toggleFullScreen} setDarkMode={setDarkMode} isFullscreen={isFullscreen} darkMode={darkMode} />
                     </div>
                 </div>
             );
