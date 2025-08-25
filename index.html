@@ -1098,29 +1098,47 @@
             useEffect(() => { if (selectedTierId) setSelectedItemId(null); }, [selectedTierId]);
 
             const moveItem = useCallback((itemId, targetTierId, beforeItemId = null) => {
-                setItems(prevItems => {
-                    const itemToMove = prevItems.find(i => i.id === itemId);
-                    if (!itemToMove) return prevItems;
-                    const fromTierName = itemToMove.tierId ? tiers.find(t => t.id === itemToMove.tierId)?.value : itemPoolTitle;
-                    const toTierName = targetTierId ? tiers.find(t => t.id === targetTierId)?.value : itemPoolTitle;
-                    setAnnouncement(`Moved item from ${fromTierName} to ${toTierName}.`);
-                    lastManuallySelectedId.current = itemId;
-                    return prevItems.map(i => i.id === itemId ? { ...i, tierId: targetTierId } : i);
-                });
+                const itemToMove = items.find(i => i.id === itemId);
+                if (!itemToMove) return;
+
+                const sourceTierId = itemToMove.tierId;
+
+                setItems(prev => prev.map(i => i.id === itemId ? { ...i, tierId: targetTierId } : i));
+
                 setTiers(prevTiers => {
-                    let newTiers = prevTiers.map(t => ({ ...t, items: t.items.filter(id => id !== itemId) }));
-                    if (targetTierId) {
-                        newTiers = newTiers.map(t => {
-                            if (t.id === targetTierId) {
-                                let newItemsInTier = [...t.items];
-                                const idx = beforeItemId ? newItemsInTier.indexOf(beforeItemId) : -1;
-                                if (idx !== -1) newItemsInTier.splice(idx, 0, itemId); else newItemsInTier.push(itemId);
-                                return { ...t, items: newItemsInTier };
-                            } return t;
-                        });
-                    } return newTiers;
+                    const newTiers = JSON.parse(JSON.stringify(prevTiers));
+
+                    const sourceTier = sourceTierId ? newTiers.find(t => t.id === sourceTierId) : null;
+                    const targetTier = targetTierId ? newTiers.find(t => t.id === targetTierId) : null;
+
+                    if (sourceTier) {
+                        const itemIndex = sourceTier.items.indexOf(itemId);
+                        if (itemIndex > -1) {
+                            sourceTier.items.splice(itemIndex, 1);
+                        }
+                    }
+
+                    if (targetTier) {
+                        if (beforeItemId) {
+                            const targetIndex = targetTier.items.indexOf(beforeItemId);
+                            if (targetIndex > -1) {
+                                targetTier.items.splice(targetIndex, 0, itemId);
+                            } else {
+                                targetTier.items.push(itemId);
+                            }
+                        } else {
+                            targetTier.items.push(itemId);
+                        }
+                    }
+
+                    return newTiers;
                 });
-            }, [tiers, itemPoolTitle]);
+
+                const fromTierName = sourceTierId ? tiers.find(t => t.id === sourceTierId)?.value : itemPoolTitle;
+                const toTierName = targetTierId ? tiers.find(t => t.id === targetTierId)?.value : itemPoolTitle;
+                setAnnouncement(`Moved item from ${fromTierName} to ${toTierName}.`);
+                lastManuallySelectedId.current = itemId;
+            }, [items, tiers, itemPoolTitle]);
 
             const cleanupDragStates = () => {
                 setDraggedItemId(null);
@@ -1195,7 +1213,7 @@
                         setTiers(prev => {
                             const dTier = prev.find(t => t.id === draggedTierId);
                             if (!dTier) return prev;
-                            const remaining = prev.filter(t => t.id !== draggedTierId);
+                            const remaining = prev.filter(t => t.id !== dTierId);
                             const targetIdx = remaining.findIndex(t => t.id === targetTierId);
                             if (targetIdx !== -1) {
                                 remaining.splice(targetIdx, 0, dTier);
@@ -1272,15 +1290,30 @@
                 const handleTouchEnd = (e) => {
                     if (!touchInfo.itemId) return;
 
-                    // Use the state values at the moment of touch end
-                    setDraggedOverTierAreaId(currentDraggedOverTierAreaId => {
-                        setDraggedOverItemId(currentDraggedOverItemId => {
-                            moveItem(touchInfo.itemId, currentDraggedOverTierAreaId, currentDraggedOverItemId);
-                            return null; // Reset
-                        });
-                        return undefined; // Reset
-                    });
+                    const touch = e.changedTouches[0];
+                    const elementOver = document.elementFromPoint(touch.clientX, touch.clientY);
 
+                    let finalTargetTierId = null;
+                    let finalBeforeItemId = null;
+
+                    if (elementOver) {
+                        const dropTargetItem = elementOver.closest(`[id^="item-"]`);
+                        const dropTargetTierArea = elementOver.closest('[data-droptarget-tier-id]');
+
+                        if (dropTargetItem && dropTargetItem.id !== `item-${touchInfo.itemId}`) {
+                            const targetItemId = dropTargetItem.id.replace('item-', '');
+                            const targetItem = items.find(i => i.id === targetItemId);
+                            if (targetItem) {
+                                finalBeforeItemId = targetItemId;
+                                finalTargetTierId = targetItem.tierId;
+                            }
+                        } else if (dropTargetTierArea) {
+                            const tierIdStr = dropTargetTierArea.dataset.droptargetTierId;
+                            finalTargetTierId = tierIdStr === 'null' ? null : tierIdStr;
+                        }
+                    }
+
+                    moveItem(touchInfo.itemId, finalTargetTierId, finalBeforeItemId);
                     cleanupDragStates();
                 };
 
@@ -1295,7 +1328,7 @@
                     window.removeEventListener('touchend', handleTouchEnd);
                     window.removeEventListener('touchcancel', handleTouchEnd);
                 };
-            }, [touchInfo.itemId, items, moveItem]); // Rerun when a touch drag starts/stops
+            }, [touchInfo.itemId, items, moveItem]);
 
 
             const handleItemClick = useCallback((itemId) => {
@@ -1538,71 +1571,72 @@
 
             const isSideLayout = poolPosition === 'right';
 
-            return (
-                <div
-                    className={`min-h-screen font-sans transition-colors duration-300 ${theme.bg} ${theme.text}`}
-                >
-                    <DragPreview
-                        item={touchInfo.itemData}
-                        itemWidth={itemWidth}
-                        itemHeight={itemHeight}
-                        position={touchInfo.itemId ? { x: touchInfo.currentX - touchInfo.offsetX, y: touchInfo.currentY - touchInfo.offsetY } : null}
-                        theme={theme}
-                    />
-                    {showCommandsPopover && <CommandsPopover theme={theme} onClose={() => setShowCommandsPopover(false)} />}
-                    {showClearDataModal && <ConfirmationModal theme={theme} onConfirm={confirmClearAllData} onCancel={() => setShowClearDataModal(false)} title="Clear All Data?" message="This will permanently delete all tiers and items from your browser's storage and cannot be undone."/>}
-                    {showOpenModal && <OpenTierListModal theme={theme} onClose={() => setShowOpenModal(false)} />}
-                    <div aria-live="assertive" style={{ position: 'absolute', width: '1px', height: '1px', padding: '0', margin: '-1px', overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: '0' }}>{announcement}</div>
-                    
-                    <div ref={appContainerRef} className="mx-auto max-w-full flex flex-col gap-1 p-1">
-                        <div className={`relative ${theme.containerBg}`}>
-                            <button
-                                onClick={() => setShowCommandsPopover(true)} 
-                                className={`absolute top-4 right-4 p-2 rounded-full z-20 ${theme.darkMode ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-500 hover:bg-gray-200 hover:text-black'}`}
-                                aria-label="Show keyboard commands"
+                        return (
+                            <div
+                                className={`min-h-screen font-sans transition-colors duration-300 ${theme.bg} ${theme.text}`}
                             >
-                                <HelpCircleIcon size={28} />
-                            </button>
-                            <input type="text" value={tierListTitle} onChange={(e) => setTierListTitle(e.target.value)} className={`text-3xl sm:text-4xl font-extrabold bg-transparent border-none focus:outline-none focus:ring-0 text-center w-full p-4 ${theme.text}`} aria-label="Tier list title"/>
-                        </div>
+                                <DragPreview
+                                    item={touchInfo.itemData}
+                                    itemWidth={itemWidth}
+                                    itemHeight={itemHeight}
+                                    position={touchInfo.itemId ? { x: touchInfo.currentX - touchInfo.offsetX, y: touchInfo.currentY - touchInfo.offsetY } : null}
+                                    theme={theme}
+                                />
+                                {showCommandsPopover && <CommandsPopover theme={theme} onClose={() => setShowCommandsPopover(false)} />}
+                                {showClearDataModal && <ConfirmationModal theme={theme} onConfirm={confirmClearAllData} onCancel={() => setShowClearDataModal(false)} title="Clear All Data?" message="This will permanently delete all tiers and items from your browser's storage and cannot be undone."/>}
+                                {showOpenModal && <OpenTierListModal theme={theme} onClose={() => setShowOpenModal(false)} />}
+                                <div aria-live="assertive" style={{ position: 'absolute', width: '1px', height: '1px', padding: '0', margin: '-1px', overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: '0' }}>{announcement}</div>
 
-                        <div className={`flex ${isSideLayout ? 'flex-row' : 'flex-col gap-1'}`}>
-                            <div 
-                                className="tier-list-container"
-                                style={isSideLayout ? { width: `${tierListPanelWidth}%` } : { width: '100%' }}
-                            >
-                                <div ref={tierListRef} className="w-full flex flex-col gap-1">
-                                    {tiers.map((tier, index) => (
-                                        <TierRow key={tier.id} tier={tier} items={items} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} deleteMode={deleteMode} selectedTierId={selectedTierId} />
-                                    ))}
+                                <div ref={appContainerRef} className="mx-auto max-w-full flex flex-col gap-1 p-1">
+                                    <div className={`relative ${theme.containerBg}`}>
+                                        <button
+                                            onClick={() => setShowCommandsPopover(true)}
+                                            className={`absolute top-4 right-4 p-2 rounded-full z-20 ${theme.darkMode ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-500 hover:bg-gray-200 hover:text-black'}`}
+                                            aria-label="Show keyboard commands"
+                                        >
+                                            <HelpCircleIcon size={28} />
+                                        </button>
+                                        <input type="text" value={tierListTitle} onChange={(e) => setTierListTitle(e.target.value)} className={`text-3xl sm:text-4xl font-extrabold bg-transparent border-none focus:outline-none focus:ring-0 text-center w-full p-4 ${theme.text}`} aria-label="Tier list title"/>
+                                    </div>
+
+                                    <div className={`flex ${isSideLayout ? 'flex-row' : 'flex-col gap-1'}`}>
+                                        <div
+                                            className="tier-list-container"
+                                            style={isSideLayout ? { width: `${tierListPanelWidth}%` } : { width: '100%' }}
+                                        >
+                                            <div ref={tierListRef} className="w-full flex flex-col gap-1">
+                                                {tiers.map((tier, index) => (
+                                                    <TierRow key={tier.id} tier={tier} items={items} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} deleteMode={deleteMode} selectedTierId={selectedTierId} />
+                                                ))}
+                                            </div>
+                                            {!isSideLayout && (
+                                                <div className='mt-1'>
+                                                    <ItemPool items={items} itemPoolTitle={itemPoolTitle} setItemPoolTitle={setItemPoolTitle} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} deleteMode={deleteMode} poolPosition={poolPosition} onTogglePosition={handleTogglePosition} />
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {isSideLayout && (
+                                            <>
+                                                <div onMouseDown={handleResizeMouseDown} className={`w-1 cursor-col-resize flex-shrink-0 ${theme.bg} hover:bg-blue-500/50 transition-colors`}></div>
+                                                <div
+                                                    className="item-pool-container flex-grow"
+                                                    style={{ width: `${100 - tierListPanelWidth}%` }}
+                                                >
+                                                    <ItemPool items={items} itemPoolTitle={itemPoolTitle} setItemPoolTitle={setItemPoolTitle} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} deleteMode={deleteMode} poolPosition={poolPosition} onTogglePosition={handleTogglePosition} />
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+
+                                    <ConfigurationPanel theme={theme} uiState={uiState} uiSetters={uiSetters} data={data} dataHandlers={allHandlers} editState={editState} editSetters={editSetters} refs={refs} itemProps={itemProps} itemSetters={itemSetters} deleteMode={deleteMode} setDeleteMode={setDeleteMode} setContainerWidth={() => {}} toggleFullScreen={toggleFullScreen} setDarkMode={setDarkMode} isFullscreen={isFullscreen} darkMode={darkMode} />
                                 </div>
-                                {!isSideLayout && (
-                                    <div className='mt-1'>
-                                        <ItemPool items={items} itemPoolTitle={itemPoolTitle} setItemPoolTitle={setItemPoolTitle} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} deleteMode={deleteMode} poolPosition={poolPosition} onTogglePosition={handleTogglePosition} />
-                                    </div>
-                                )}
                             </div>
-                            
-                            {isSideLayout && (
-                                <>
-                                    <div onMouseDown={handleResizeMouseDown} className={`w-1 cursor-col-resize flex-shrink-0 ${theme.bg} hover:bg-blue-500/50 transition-colors`}></div>
-                                    <div 
-                                        className="item-pool-container flex-grow"
-                                        style={{ width: `${100 - tierListPanelWidth}%` }}
-                                    >
-                                        <ItemPool items={items} itemPoolTitle={itemPoolTitle} setItemPoolTitle={setItemPoolTitle} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} deleteMode={deleteMode} poolPosition={poolPosition} onTogglePosition={handleTogglePosition} />
-                                    </div>
-                                </>
-                            )}
-                        </div>
+                        );
+                    }
 
-                        <ConfigurationPanel theme={theme} uiState={uiState} uiSetters={uiSetters} data={data} dataHandlers={allHandlers} editState={editState} editSetters={editSetters} refs={refs} itemProps={itemProps} itemSetters={itemSetters} deleteMode={deleteMode} setDeleteMode={setDeleteMode} setContainerWidth={() => {}} toggleFullScreen={toggleFullScreen} setDarkMode={setDarkMode} isFullscreen={isFullscreen} darkMode={darkMode} />
-                    </div>
-                </div>
-            );
-        }
-
-        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-    </script>
-</body>
-</html>
+                    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+                </script>
+            </body>
+            </html>
+            
