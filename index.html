@@ -1249,67 +1249,73 @@
 
                 if (dragInfo.current.isDragging) {
                     const { clientX, clientY } = e;
-                    addLog(`PointerUp at (${clientX.toFixed(0)}, ${clientY.toFixed(0)})`, 'event');
 
-                    const ghostEl = document.getElementById('drag-ghost');
-                    if (ghostEl) ghostEl.style.display = 'none';
+                    // Immediately remove the ghost from the DOM
+                    setDragGhost(null);
 
-                    const elementsUnderPointer = document.elementsFromPoint(clientX, clientY);
-                    addLog(`Elements under pointer: [${elementsUnderPointer.map(el => (el.id || el.tagName)).join(', ')}]`, 'info');
+                    // Defer the drop logic to allow React to re-render and remove the ghost
+                    setTimeout(() => {
+                        addLog(`PointerUp at (${clientX.toFixed(0)}, ${clientY.toFixed(0)})`, 'event');
 
-                    let finalTargetTierArea = null;
-                    let finalTargetItemEl = null;
+                        const elementsUnderPointer = document.elementsFromPoint(clientX, clientY);
+                        addLog(`Elements under pointer: [${elementsUnderPointer.map(el => `${el.tagName}#${el.id || ''}.${el.className.split(' ')[0] || ''}`).join(', ')}]`, 'info');
 
-                    for (const el of elementsUnderPointer) {
-                        if (!finalTargetTierArea) {
-                            finalTargetTierArea = el.closest('[data-droptarget-tier-id]');
-                        }
-                        if (!finalTargetItemEl) {
-                            finalTargetItemEl = el.closest('[id^="item-"]');
-                        }
-                        if (finalTargetTierArea && finalTargetItemEl) break;
-                    }
+                        let finalTargetTierArea = null;
+                        let finalTargetItemEl = null;
 
-                    if (ghostEl) ghostEl.style.display = 'flex';
-
-                    if (draggedTierId) {
-                        const finalTierRow = elementsUnderPointer.find(el => el.closest('[data-tier-row-id]'));
-                        if (finalTierRow) {
-                            const finalTargetTierId = finalTierRow.closest('[data-tier-row-id]').dataset.tierRowId;
-                            addLog(`Tier ${draggedTierId} dropped on tier ${finalTargetTierId}`, 'action');
-                             setTiers(prev => {
-                                const dTier = prev.find(t => t.id === draggedTierId); if (!dTier) return prev;
-                                const remaining = prev.filter(t => t.id !== draggedTierId);
-                                const targetIdx = remaining.findIndex(t => t.id === finalTargetTierId);
-                                if (targetIdx !== -1 && draggedTierId !== finalTargetTierId) {
-                                     remaining.splice(targetIdx, 0, dTier);
-                                     return remaining;
-                                }
-                                return prev;
-                            });
-                        }
-                    } else if (draggedItemId) {
-                        if (finalTargetTierArea) {
-                            addLog(`Found drop target area: ${finalTargetTierArea.dataset.droptargetTierId}`, 'info');
-                            const finalTargetTierId = finalTargetTierArea.dataset.droptargetTierId === 'null' ? null : finalTargetTierArea.dataset.droptargetTierId;
-                            let beforeItemId = null;
-                            if (finalTargetItemEl) {
-                                const finalTargetItemId = finalTargetItemEl.id.replace('item-', '');
-                                addLog(`Found item to drop before: ${finalTargetItemId}`, 'info');
-                                if(finalTargetItemId !== draggedItemId) {
-                                    beforeItemId = finalTargetItemId;
-                                } else {
-                                     addLog(`Drop target is the item itself, ignoring.`, 'warning');
-                                }
+                        for (const el of elementsUnderPointer) {
+                            if (!finalTargetTierArea) {
+                                finalTargetTierArea = el.closest('[data-droptarget-tier-id]');
                             }
-                            addLog(`Calling moveItem(${draggedItemId}, ${finalTargetTierId}, ${beforeItemId})`, 'action');
-                            moveItem(draggedItemId, finalTargetTierId, beforeItemId);
-                        } else {
-                             addLog(`No valid drop target area found at drop location. Reverting.`, 'error');
+                            if (!finalTargetItemEl) {
+                                finalTargetItemEl = el.closest('[id^="item-"]');
+                            }
+                            if (finalTargetTierArea && finalTargetItemEl) break;
                         }
-                    }
+
+                        if (draggedTierId) {
+                            const finalTierRow = elementsUnderPointer.find(el => el.closest('[data-tier-row-id]'));
+                            if (finalTierRow) {
+                                const finalTargetTierId = finalTierRow.closest('[data-tier-row-id]').dataset.tierRowId;
+                                addLog(`Tier ${draggedTierId} dropped on tier ${finalTargetTierId}`, 'action');
+                                 setTiers(prev => {
+                                    const dTier = prev.find(t => t.id === draggedTierId); if (!dTier) return prev;
+                                    const remaining = prev.filter(t => t.id !== draggedTierId);
+                                    const targetIdx = remaining.findIndex(t => t.id === finalTargetTierId);
+                                    if (targetIdx !== -1 && draggedTierId !== finalTargetTierId) {
+                                         remaining.splice(targetIdx, 0, dTier);
+                                         return remaining;
+                                    }
+                                    return prev;
+                                });
+                            }
+                        } else if (draggedItemId) {
+                            if (finalTargetTierArea) {
+                                addLog(`Found drop target area: ${finalTargetTierArea.dataset.droptargetTierId}`, 'info');
+                                const finalTargetTierId = finalTargetTierArea.dataset.droptargetTierId === 'null' ? null : finalTargetTierArea.dataset.droptargetTierId;
+                                let beforeItemId = null;
+                                if (finalTargetItemEl) {
+                                    const finalTargetItemId = finalTargetItemEl.id.replace('item-', '');
+                                    addLog(`Found item to drop before: ${finalTargetItemId}`, 'info');
+                                    if(finalTargetItemId !== draggedItemId) {
+                                        beforeItemId = finalTargetItemId;
+                                    } else {
+                                         addLog(`Drop target is the item itself, ignoring.`, 'warning');
+                                    }
+                                }
+                                addLog(`Calling moveItem(${draggedItemId}, ${finalTargetTierId}, ${beforeItemId})`, 'action');
+                                moveItem(draggedItemId, finalTargetTierId, beforeItemId);
+                            } else {
+                                 addLog(`No valid drop target area found at drop location. Reverting.`, 'error');
+                            }
+                        }
+                        // Cleanup happens after the logic runs
+                        cleanupDragStates();
+                    }, 0);
+                    return; // Exit early to let the timeout handle cleanup
                 }
 
+                // If it wasn't a drag, clean up immediately
                 cleanupDragStates();
             };
 
