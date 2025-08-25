@@ -1156,7 +1156,6 @@
             const handlePointerDown = (e, id, isTier = false) => {
                 if (!e.isPrimary) return;
 
-                // **FIX:** Prevent default browser actions like text selection/callout menu on iOS.
                 e.preventDefault();
 
                 dragInfo.current.itemId = id;
@@ -1249,47 +1248,58 @@
                 }
 
                 if (dragInfo.current.isDragging) {
-                    // **FIX:** Perform a final, accurate check for the drop target on pointer up.
                     const { clientX, clientY } = e;
                     const ghostEl = document.getElementById('drag-ghost');
                     if (ghostEl) ghostEl.style.display = 'none';
-                    const finalTargetEl = document.elementFromPoint(clientX, clientY);
+
+                    // **FIX:** Use `elementsFromPoint` for robust target detection.
+                    const elementsUnderPointer = document.elementsFromPoint(clientX, clientY);
+                    let finalTargetTierArea = null;
+                    let finalTargetItemEl = null;
+
+                    for (const el of elementsUnderPointer) {
+                        if (!finalTargetTierArea) {
+                            finalTargetTierArea = el.closest('[data-droptarget-tier-id]');
+                        }
+                        if (!finalTargetItemEl) {
+                            finalTargetItemEl = el.closest('[id^="item-"]');
+                        }
+                        if (finalTargetTierArea && finalTargetItemEl) break;
+                    }
+
                     if (ghostEl) ghostEl.style.display = 'flex';
 
-                    if (finalTargetEl) {
-                        if (draggedTierId) {
-                            const finalTierRow = finalTargetEl.closest('[data-tier-row-id]');
-                            if (finalTierRow) {
-                                const finalTargetTierId = finalTierRow.dataset.tierRowId;
-                                setTiers(prev => {
-                                    const dTier = prev.find(t => t.id === draggedTierId); if (!dTier) return prev;
-                                    const remaining = prev.filter(t => t.id !== draggedTierId);
-                                    const targetIdx = remaining.findIndex(t => t.id === finalTargetTierId);
-                                    if (targetIdx !== -1) remaining.splice(targetIdx, 0, dTier); else remaining.push(dTier);
-                                    return remaining;
-                                });
-                            }
-                        } else if (draggedItemId) {
-                            const finalTierArea = finalTargetEl.closest('[data-droptarget-tier-id]');
-                            const finalTargetItemEl = finalTargetEl.closest('[id^="item-"]');
-
-                            if (finalTierArea) {
-                                const finalTargetTierId = finalTierArea.dataset.droptargetTierId === 'null' ? null : finalTierArea.dataset.droptargetTierId;
-                                let beforeItemId = null;
-                                if (finalTargetItemEl) {
-                                    const finalTargetItemId = finalTargetItemEl.id.replace('item-', '');
-                                    if(finalTargetItemId !== draggedItemId) {
-                                        beforeItemId = finalTargetItemId;
-                                    }
+                    if (draggedTierId) {
+                        const finalTierRow = elementsUnderPointer.find(el => el.closest('[data-tier-row-id]'));
+                        if (finalTierRow) {
+                            const finalTargetTierId = finalTierRow.closest('[data-tier-row-id]').dataset.tierRowId;
+                             setTiers(prev => {
+                                const dTier = prev.find(t => t.id === draggedTierId); if (!dTier) return prev;
+                                const remaining = prev.filter(t => t.id !== draggedTierId);
+                                const targetIdx = remaining.findIndex(t => t.id === finalTargetTierId);
+                                if (targetIdx !== -1 && draggedTierId !== finalTargetTierId) {
+                                     remaining.splice(targetIdx, 0, dTier);
+                                     return remaining;
                                 }
-                                moveItem(draggedItemId, finalTargetTierId, beforeItemId);
+                                return prev; // Return original if drop is on itself or invalid
+                            });
+                        }
+                    } else if (draggedItemId && finalTargetTierArea) {
+                        const finalTargetTierId = finalTargetTierArea.dataset.droptargetTierId === 'null' ? null : finalTargetTierArea.dataset.droptargetTierId;
+                        let beforeItemId = null;
+                        if (finalTargetItemEl) {
+                            const finalTargetItemId = finalTargetItemEl.id.replace('item-', '');
+                            if(finalTargetItemId !== draggedItemId) {
+                                beforeItemId = finalTargetItemId;
                             }
                         }
+                        moveItem(draggedItemId, finalTargetTierId, beforeItemId);
                     }
                 }
 
                 cleanupDragStates();
             };
+
 
             const handleItemClick = useCallback((itemId) => {
                 setSelectedItemId(prevSelectedId => {
