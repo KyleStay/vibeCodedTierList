@@ -1250,8 +1250,11 @@
                 if (dragInfo.current.isDragging) {
                     const { clientX, clientY } = e;
 
-                    // Immediately remove the ghost from the DOM
-                    setDragGhost(null);
+                    // **FIX:** Manually hide the ghost element BEFORE checking the drop target.
+                    const ghostEl = document.getElementById('drag-ghost');
+                    if (ghostEl) {
+                        ghostEl.style.display = 'none';
+                    }
 
                     // Defer the drop logic to allow React to re-render and remove the ghost
                     setTimeout(() => {
