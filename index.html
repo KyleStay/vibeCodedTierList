@@ -150,19 +150,25 @@
 
         // --- UI COMPONENTS ---
 
-        const DraggableItem = memo(({ item, itemWidth, itemHeight, theme, draggedItemId, draggedOverItemId, handlers, addLog, deleteMode, selectedItemId }) => (
+        const DraggableItem = memo(({ item, itemWidth, itemHeight, theme, draggedItemId, draggedOverItemId, handlers, deleteMode, selectedItemId }) => (
             <div
                 id={`item-${item.id}`}
                 tabIndex={0}
                 role="button"
                 aria-pressed={selectedItemId === item.id}
                 aria-label={`Item: ${item.value || 'image'}. ${item.tierId ? `In tier ${item.tierId}` : 'In item pool'}. Press Space or Enter to select.`}
+                draggable={true}
                 onClick={() => handlers.handleItemClick(item.id)}
-                onPointerDown={(e) => handlers.handlePointerDown(e, item.id)}
+                onDragStart={(e) => handlers.handleItemDragStart(e, item.id)}
+                onDragEnter={(e) => handlers.handleItemDragEnter(e, item.id, item.tierId)}
+                onDragOver={(e) => handlers.handleDragOver(e)}
+                onDragLeave={(e) => handlers.handleItemDragLeave(e)}
+                onDrop={(e) => handlers.handleDrop(e, item.tierId, item.id)}
+                onDragEnd={handlers.cleanupDragStates}
                 className={`relative z-10 cursor-grab active:cursor-grabbing
                             ${draggedItemId === item.id ? 'opacity-30' : ''}
                             ${selectedItemId === item.id ? 'keyboard-selected' : ''}`}
-                style={{ width: `${itemWidth}px`, height: `${itemHeight}px`, touchAction: 'none' }}
+                style={{ width: `${itemWidth}px`, height: `${itemHeight}px` }}
             >
                 <div
                     className={`w-full h-full flex items-center justify-center overflow-hidden ${theme.itemBg} border ${theme.borderColor} rounded-sm shadow-sm transition-all duration-200
@@ -170,7 +176,7 @@
                     ${draggedOverItemId === item.id && draggedItemId !== item.id ? 'drag-over-item' : ''}`}
                 >
                     {item.type === 'image' ? (
-                        <img src={item.value} alt={item.value || "Item"} className="w-full h-full object-contain pointer-events-none" crossOrigin="anonymous" onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/${itemWidth}x${itemHeight}/FF0000/FFFFFF?text=Error`; e.target.alt = "Image failed"; addLog(`Failed image: ${item.value}`, "error"); }} />
+                        <img src={item.value} alt={item.value || "Item"} className="w-full h-full object-contain pointer-events-none" crossOrigin="anonymous" onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/${itemWidth}x${itemHeight}/FF0000/FFFFFF?text=Error`; e.target.alt = "Image failed"; }} />
                     ) : (
                         <span className={`text-sm font-medium ${theme.inputText} text-center p-1 break-all pointer-events-none`}>{item.value}</span>
                     )}
@@ -185,14 +191,16 @@
             </div>
         ));
 
-        const TierRow = ({ tier, items, theme, dragState, handlers, itemProps, index, totalTiers, deleteMode, selectedTierId }) => {
+        const TierRow = ({ tier, items, theme, dragState, handlers, itemProps, deleteMode, selectedTierId }) => {
             const { draggedTierId, draggedOverTierRowId, draggedOverTierAreaId, draggedItemId, draggedOverItemId, selectedItemId } = dragState;
             const tierItems = tier.items.map(itemId => items.find(i => i.id === itemId)).filter(Boolean);
             const minTierHeight = itemProps.itemHeight + 16; // itemHeight + p-2 (8px top + 8px bottom)
 
             return (
                 <div
-                    data-tier-row-id={tier.id}
+                    onDragOver={(e) => handlers.handleTierRowDragOver(e, tier.id)}
+                    onDragLeave={(e) => handlers.handleTierRowDragLeave(e)}
+                    onDrop={(e) => handlers.handleDrop(e, tier.id)}
                     className={`flex items-stretch transition-all duration-200
                             ${draggedOverTierRowId === tier.id && draggedTierId && draggedTierId !== tier.id ? 'tier-row-drop-target' : ''}`}
                     style={{ minHeight: `${minTierHeight}px` }}
@@ -203,10 +211,12 @@
                         role="button"
                         aria-pressed={selectedTierId === tier.id}
                         aria-label={`Tier: ${tier.value}. Press Space or Enter to select.`}
+                        draggable={true}
                         onClick={() => handlers.handleTierClick(tier.id)}
-                        onPointerDown={(e) => handlers.handlePointerDown(e, tier.id, true)}
+                        onDragStart={(e) => handlers.handleTierLabelDragStart(e, tier.id)}
+                        onDragEnd={handlers.cleanupDragStates}
                         className={`relative flex-shrink-0 p-3 flex items-center justify-center text-center font-bold text-lg text-black group tier-label-draggable ${draggedTierId === tier.id ? 'tier-label-dragging' : ''} ${selectedTierId === tier.id ? 'keyboard-selected' : ''}`}
-                        style={{ backgroundColor: tier.color, width: `${itemProps.tierLabelWidth}px`, touchAction: 'none' }}
+                        style={{ backgroundColor: tier.color, width: `${itemProps.tierLabelWidth}px` }}
                     >
                         <span className="pointer-events-none">{tier.value}</span>
                         <>
@@ -216,11 +226,15 @@
                     </div>
                     <div
                         data-droptarget-tier-id={tier.id}
+                        onDragEnter={(e) => handlers.handleTierAreaDragEnter(e, tier.id)}
+                        onDragOver={(e) => handlers.handleDragOver(e)}
+                        onDragLeave={(e) => handlers.handleTierAreaDragLeave(e)}
+                        onDrop={(e) => handlers.handleDrop(e, tier.id, null)}
                         className={`flex-grow p-2 flex flex-wrap gap-2 items-start justify-start ${theme.containerBg}
                             ${draggedOverTierAreaId === tier.id && draggedItemId && !draggedOverItemId ? 'drag-over-tier-area' : ''}`}
                         aria-label={`Tier ${tier.value} content area`}
                     >
-                        {tierItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} selectedItemId={selectedItemId} />)}
+                        {tierItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} selectedItemId={selectedItemId} />)}
                     </div>
                 </div>
             );
@@ -234,6 +248,10 @@
             return (
                 <div
                     data-droptarget-tier-id="null"
+                    onDragEnter={(e) => handlers.handleTierAreaDragEnter(e, null)}
+                    onDragOver={(e) => handlers.handleDragOver(e)}
+                    onDragLeave={(e) => handlers.handleTierAreaDragLeave(e)}
+                    onDrop={(e) => handlers.handleDrop(e, null, null)}
                     className={`relative p-4 flex flex-col ${theme.containerBg}
                             ${draggedOverTierAreaId === null && draggedItemId ? 'drag-over-tier-area' : ''}
                             ${isSideLayout ? 'h-full' : 'min-h-[150px] w-full'}`}
@@ -249,7 +267,7 @@
                         />
                     </div>
                     <div className={`flex flex-wrap gap-2 justify-center sm:justify-start flex-grow ${isSideLayout ? 'overflow-y-auto p-2' : 'min-h-[100px]'}`}>
-                        {unassignedItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} addLog={handlers.addLog} selectedItemId={selectedItemId} />)}
+                        {unassignedItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} selectedItemId={selectedItemId} />)}
                     </div>
                     <div className="absolute bottom-4 right-4 flex gap-2">
                         { window.innerWidth >= 1280 &&
@@ -363,7 +381,6 @@
             const handleDelete = (idToDelete) => {
                 localStorage.removeItem(`tierListMakerState_${idToDelete}`);
                 setSavedLists(prev => prev.filter(list => list.id !== idToDelete));
-                addLog(`Deleted saved tier list.`, 'action');
             };
 
             return (
@@ -394,13 +411,13 @@
 
 
         const ConfigurationPanel = ({ theme, uiState, uiSetters, data, dataHandlers, editState, editSetters, refs, itemProps, itemSetters, deleteMode, setDeleteMode, setContainerWidth, toggleFullScreen, setDarkMode, isFullscreen, darkMode }) => {
-            const { showConfiguration, editingTierId, showLogs } = uiState;
-            const { setShowConfiguration, setShowLogs, handleSelectFirstItemInPool } = uiSetters;
-            const { logs, standardColors } = data;
-            const { handleAddTier, handleAddItem, handlePasteItems, handleSaveEditedTier, cancelEditingTier, addLog, handleExportImage, handleClearAllData, handleNewTierList, handleOpenTierList } = dataHandlers;
+            const { showConfiguration, editingTierId } = uiState;
+            const { setShowConfiguration, handleSelectFirstItemInPool } = uiSetters;
+            const { standardColors } = data;
+            const { handleAddTier, handleAddItem, handlePasteItems, handleSaveEditedTier, cancelEditingTier, handleExportImage, handleClearAllData, handleNewTierList, handleOpenTierList } = dataHandlers;
             const { editingTierLabel, editingTierColor, newTierColor } = editState;
             const { setEditingTierLabel, setEditingTierColor, setNewTierColor } = editSetters;
-            const { newTierNameRef, newItemNameRef, newItemImageFileRef, newItemImageUrlRef, pasteItemsRef, importFileRef, logDisplayRef } = refs;
+            const { newTierNameRef, newItemNameRef, newItemImageFileRef, newItemImageUrlRef, pasteItemsRef, importFileRef } = refs;
             const { itemWidth, itemHeight, tierLabelWidth } = itemProps;
             const { setItemWidth, setItemHeight, setTierLabelWidth } = itemSetters;
 
@@ -408,22 +425,6 @@
                 const hex = e.target.value;
                 if (/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(hex)) {
                     if (isEditing) setEditingTierColor(hex); else setNewTierColor(hex);
-                }
-            };
-
-            const copyLogsToClipboard = () => {
-                const logText = logs.map(l => `[${l.timestamp}] [${l.type.toUpperCase()}] ${l.message}`).join('\n');
-                if (logText) navigator.clipboard.writeText(logText).then(()=> addLog("Logs copied.", "info")).catch(()=> addLog("Clipboard copy failed.", "error"));
-                else addLog("No logs to copy.", "info");
-            };
-
-            const selectAllLogs = () => {
-                if (logDisplayRef.current) {
-                    const range = document.createRange();
-                    range.selectNodeContents(logDisplayRef.current);
-                    const selection = window.getSelection();
-                    selection.removeAllRanges();
-                    selection.addRange(range);
                 }
             };
 
@@ -449,14 +450,12 @@
                 setItemWidth(preset.w);
                 setItemHeight(preset.h);
                 setTierLabelWidth(preset.lw);
-                addLog(`Zoom set to ${preset.name} (${preset.w}x${preset.h})`, 'info');
             };
 
             const handleZoomAdjust = (factor) => {
                 setItemWidth(w => Math.round(Math.max(20, w * factor)));
                 setItemHeight(h => Math.round(Math.max(20, h * factor)));
                 setTierLabelWidth(lw => Math.round(Math.max(40, lw * factor)));
-                addLog(`Zoom adjusted by ${factor > 1 ? '+' : '-'}10%`, 'info');
             };
 
             return (
@@ -636,26 +635,6 @@
                                         </button>
                                     </div>
                                 </div>
-                                {/* Logs Section */}
-                                <div className={`${theme.containerBg} p-4`}>
-                                    <h3 className={`text-xl font-semibold ${theme.text} mb-3 text-center flex items-center justify-center gap-2`}>
-                                        <FileTextIcon size={20} /> Application Logs
-                                        <button onClick={()=>setShowLogs(!showLogs)} className={`p-1 rounded-full ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`} aria-expanded={showLogs}>{showLogs?<ChevronUpIcon size={18}/>:<ChevronDownIcon size={18}/>}</button>
-                                    </h3>
-                                    {showLogs && (<>
-                                        <div className="flex gap-2 mb-3">
-                                            <button onClick={copyLogsToClipboard} className={`flex-1 py-1.5 px-3 rounded-sm ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>Copy</button>
-                                            <button onClick={selectAllLogs} className={`flex-1 py-1.5 px-3 rounded-sm ${theme.darkMode?'bg-gray-700 hover:bg-gray-600':'bg-gray-300 hover:bg-gray-400'}`}>Select</button>
-                                        </div>
-                                        <div ref={logDisplayRef} className={`log-display-area flex flex-col gap-1 ${theme.sectionBg} p-3 rounded-sm border ${theme.borderColor} max-h-60 overflow-y-auto text-left`}>
-                                            {logs.length === 0 ? <p className={`${theme.darkMode?'text-gray-400':'text-gray-600'} text-sm`}>No logs.</p> : logs.map((l,i)=>(
-                                                <p key={i} className={`text-xs font-mono ${l.type==='error'?(theme.darkMode?'text-red-400':'text-red-600'):l.type==='warning'?(theme.darkMode?'text-yellow-400':'text-yellow-600'):l.type==='action'?(theme.darkMode?'text-blue-300':'text-blue-600'):l.type==='event'?(theme.darkMode?'text-purple-300':'text-purple-600'):(theme.darkMode?'text-gray-300':'text-gray-700')}`}>
-                                                    <span className={`${theme.darkMode?'text-gray-500':'text-gray-400'}`}>{l.timestamp}</span> <span className={`font-bold ${l.type==='error'?(theme.darkMode?'text-red-500':'text-red-700'):l.type==='warning'?(theme.darkMode?'text-yellow-500':'text-yellow-700'):l.type==='action'?(theme.darkMode?'text-blue-400':'text-blue-700'):l.type==='event'?(theme.darkMode?'text-purple-400':'text-purple-700'):(theme.darkMode?'text-gray-400':'text-gray-500')}`}>[{l.type.toUpperCase()}]</span> {l.message}
-                                                </p>
-                                            ))}
-                                        </div></>
-                                    )}
-                                </div>
                             </div>
                         )}
                 </div>
@@ -719,11 +698,9 @@
 
             // --- STATE MANAGEMENT ---
             const [darkMode, setDarkMode] = useState(true);
-            const [logs, setLogs] = useState([]);
             const [announcement, setAnnouncement] = useState("");
             const [showClearDataModal, setShowClearDataModal] = useState(false);
             const [showOpenModal, setShowOpenModal] = useState(false);
-            const addLog = useCallback((message, type = 'info') => setLogs(prev => [{ message, type, timestamp: new Date().toLocaleTimeString() }, ...prev].slice(0, 100)), []);
 
             const [tiers, setTiers] = useState(initialState.tiers);
             const [items, setItems] = useState(initialState.items);
@@ -736,19 +713,7 @@
             const [isFullscreen, setIsFullscreen] = useState(false);
             
             const [showConfiguration, setShowConfiguration] = useState(true);
-            const [showLogs, setShowLogs] = useState(false);
             const [showCommandsPopover, setShowCommandsPopover] = useState(false);
-
-            // Refactored Drag-and-Drop State
-            const [dragGhost, setDragGhost] = useState(null); // Unified ghost for touch and mouse
-            const dragInfo = useRef({
-                isDragging: false,
-                itemId: null,
-                isTierLabel: false,
-                startX: 0,
-                startY: 0,
-                longPressTimer: null,
-            });
 
             // Layout state
             const [poolPosition, setPoolPosition] = useState('bottom');
@@ -778,7 +743,6 @@
             const pasteItemsRef = useRef(null);
             const appContainerRef = useRef(null);
             const importFileRef = useRef(null);
-            const logDisplayRef = useRef(null);
             const tierListRef = useRef(null); // Ref for the element to capture
             
             const standardColors = ['#ff7f7f', '#ffbf7f', '#ffff7f', '#bfff7f', '#7fbfff', '#bf7fff', '#c0c0c0', '#404040'];
@@ -795,7 +759,6 @@
                         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(fullState));
                     } catch (error) {
                         console.error("Error saving state to Local Storage:", error);
-                        addLog("Could not save state to browser storage.", "error");
                     }
 
                     // Save shareable state (without base64 images) to URL
@@ -807,7 +770,7 @@
                 }, 700);
 
                 return () => clearTimeout(timerId);
-            }, [tiers, items, tierListTitle, itemWidth, itemHeight, itemPoolTitle, tierLabelWidth, addLog, appId, LOCAL_STORAGE_KEY]);
+            }, [tiers, items, tierListTitle, itemWidth, itemHeight, itemPoolTitle, tierLabelWidth, appId, LOCAL_STORAGE_KEY]);
 
 
             const toggleFullScreen = useCallback(() => {
@@ -853,7 +816,6 @@
             // --- DATA HANDLERS ---
             const handleExportImage = () => {
                 if (tierListRef.current) {
-                    addLog('Generating image...', 'info');
                     html2canvas(tierListRef.current, {
                         useCORS: true, // Important for external images
                         allowTaint: true,
@@ -866,13 +828,9 @@
                         link.download = fileName;
                         link.href = canvas.toDataURL('image/png');
                         link.click();
-                        addLog(`Image exported as ${fileName}`, 'action');
                     }).catch(err => {
-                        addLog(`Image export failed: ${err.message}`, 'error');
                         console.error('html2canvas error:', err);
                     });
-                } else {
-                    addLog('Tier list element not found for capture.', 'error');
                 }
             };
 
@@ -889,7 +847,6 @@
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
-                addLog(`State exported to ${fileName}`, 'action');
             };
 
             const handleExportAllStates = () => {
@@ -902,7 +859,6 @@
                 }
 
                 if (Object.keys(allData).length === 0) {
-                    addLog("No saved tier lists to export.", "warning");
                     return;
                 }
 
@@ -916,7 +872,6 @@
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
-                addLog(`Exported all ${Object.keys(allData).length} tier lists.`, 'action');
             };
 
 
@@ -933,7 +888,6 @@
                             // Single file import
                             const { data, error } = validateStateData(parsedData);
                             if (error) {
-                                addLog(error.message, error.type);
                                 return;
                             }
                             setTiers(data.tiers || []);
@@ -943,7 +897,6 @@
                             setItemWidth(data.itemWidth);
                             setItemHeight(data.itemHeight);
                             setTierLabelWidth(data.tierLabelWidth);
-                            addLog('State successfully imported from file.', 'action');
                         } else if (Object.keys(parsedData).every(k => k.startsWith('tierListMakerState_'))) {
                             // Multi-file import
                             let importedCount = 0;
@@ -954,7 +907,6 @@
                                     importedCount++;
                                 }
                             });
-                                addLog(`Imported ${importedCount} tier lists from backup.`, 'action');
                         } else {
                             throw new Error("Invalid file format.");
                         }
@@ -968,7 +920,7 @@
 
 
                     } catch (err) {
-                        addLog(`Error reading file: ${err.message}`, 'error');
+                        console.error("Error reading file", err);
                     } finally {
                         if (importFileRef.current) {
                             importFileRef.current.value = null;
@@ -976,7 +928,7 @@
                     }
                 };
                 reader.onerror = () => {
-                    addLog('Failed to read the file.', 'error');
+                    console.error('Failed to read the file.');
                 };
                 reader.readAsText(file);
             };
@@ -984,7 +936,6 @@
             const handleItemImageUpload = (event) => {
                 const files = event.target.files;
                 if (!files || files.length === 0) return;
-                addLog(`Processing ${files.length} image(s)...`, 'info');
 
                 let isFirstImage = true;
 
@@ -1015,34 +966,31 @@
                         };
                         img.src = reader.result;
                     };
-                    reader.onerror = () => addLog(`Error reading file: ${file.name}`, "error");
                     reader.readAsDataURL(file);
                 });
 
                 window.scrollTo(0, 0);
-                addLog(`Added ${files.length} items from files.`, 'action');
                 if (newItemImageFileRef.current) newItemImageFileRef.current.value = '';
             };
 
             const handleAddTier = () => {
                 const name = newTierNameRef.current.value.trim();
-                if (!name) { addLog("Tier name required.", "warning"); return; }
+                if (!name) { return; }
                 const newTier = { id: generateId(), items: [], color: newTierColor, type: 'name', value: name };
                 setTiers(p => [...p, newTier]);
-                addLog(`Added text tier: ${name}`, "info");
                 newTierNameRef.current.value = '';
             };
 
             const handleAddItem = () => {
                 const name = newItemNameRef.current.value.trim();
                 const url = newItemImageUrlRef.current.value.trim();
-                if (!name && !url) { addLog("Item name or URL required.", "warning"); return; }
+                if (!name && !url) { return; }
                 let newItem = { id: generateId(), tierId: null };
                 if (url) {
-                    if (!url.startsWith('http')) { addLog("Invalid item URL.", "error"); return; }
-                    newItem.type = 'image'; newItem.value = url; setItems(p => [...p, newItem]); addLog("Added URL item.", "info");
+                    if (!url.startsWith('http')) { return; }
+                    newItem.type = 'image'; newItem.value = url; setItems(p => [...p, newItem]);
                 } else {
-                    newItem.type = 'name'; newItem.value = name; setItems(p => [...p, newItem]); addLog(`Added text item: ${name}`, "info");
+                    newItem.type = 'name'; newItem.value = name; setItems(p => [...p, newItem]);
                 }
                 newItemNameRef.current.value = '';
                 if (newItemImageUrlRef.current) newItemImageUrlRef.current.value = '';
@@ -1059,9 +1007,9 @@
             }, [items]);
 
             const handlePasteItems = () => {
-                const text = pasteItemsRef.current.value.trim(); if (!text) { addLog("Paste area empty.", "warning"); return; }
+                const text = pasteItemsRef.current.value.trim(); if (!text) { return; }
                 const newItems = text.split('\n').map(l => ({ id: generateId(), type: 'name', value: l.trim(), tierId: null })).filter(i => i.value);
-                setItems(p => [...p, ...newItems]); addLog(`Pasted ${newItems.length} items.`, "info"); pasteItemsRef.current.value = '';
+                setItems(p => [...p, ...newItems]); pasteItemsRef.current.value = '';
                 window.scrollTo(0, 0);
                 handleSelectFirstItemInPool();
             };
@@ -1069,27 +1017,23 @@
             const handleResetAllItemsToPool = () => {
                 setItems(prevItems => prevItems.map(item => ({ ...item, tierId: null })));
                 setTiers(prevTiers => prevTiers.map(tier => ({ ...tier, items: [] })));
-                addLog("All items reset to pool.", "action");
             };
 
-            const handleDeleteItem = (id) => { setItems(p => p.filter(i => i.id !== id)); setTiers(p => p.map(t => ({ ...t, items: t.items.filter(itemId => itemId !== id) }))); addLog(`Deleted item ${id}`, "action"); };
-            const handleDeleteTier = (id) => { const tierDel = tiers.find(t=>t.id===id); if(tierDel) setItems(p=>p.map(i=>tierDel.items.includes(i.id)?{...i, tierId:null}:i)); setTiers(p => p.filter(t => t.id !== id)); if(editingTierId===id) cancelEditingTier(); addLog(`Deleted tier ${id}`, "action"); };
+            const handleDeleteItem = (id) => { setItems(p => p.filter(i => i.id !== id)); setTiers(p => p.map(t => ({ ...t, items: t.items.filter(itemId => itemId !== id) }))); };
+            const handleDeleteTier = (id) => { const tierDel = tiers.find(t=>t.id===id); if(tierDel) setItems(p=>p.map(i=>tierDel.items.includes(i.id)?{...i, tierId:null}:i)); setTiers(p => p.filter(t => t.id !== id)); if(editingTierId===id) cancelEditingTier(); };
             
-            const startEditingTier = (tier) => { setEditingTierId(tier.id); setEditingTierLabel(tier.value); setEditingTierColor(tier.color); setShowConfiguration(true); addLog(`Editing tier ${tier.id}`, "info"); };
+            const startEditingTier = (tier) => { setEditingTierId(tier.id); setEditingTierLabel(tier.value); setEditingTierColor(tier.color); setShowConfiguration(true); };
             
             const handleSaveEditedTier = () => {
                 if (!editingTierId) return;
                 const updatedValue = editingTierLabel.trim();
                 if (updatedValue) {
                     setTiers(p => p.map(t => t.id === editingTierId ? { ...t, value: updatedValue, color: editingTierColor } : t));
-                    addLog(`Saved tier ${editingTierId}`, "action");
                     cancelEditingTier();
-                } else {
-                    addLog("Label cannot be empty.", "warning");
                 }
             };
 
-            const cancelEditingTier = () => { setEditingTierId(null); setEditingTierLabel(''); setEditingTierColor('#888888'); addLog("Edit tier cancelled.", "info"); };
+            const cancelEditingTier = () => { setEditingTierId(null); setEditingTierLabel(''); setEditingTierColor('#888888'); };
 
             const handleNewTierList = () => {
                 window.open(window.location.origin + window.location.pathname, '_blank');
@@ -1105,7 +1049,6 @@
 
             const confirmClearAllData = () => {
                 localStorage.clear();
-                addLog("All application data cleared.", "action");
                 window.location.href = window.location.origin + window.location.pathname; // Reload to a clean state
             };
 
@@ -1141,11 +1084,6 @@
             }, [tiers, itemPoolTitle]);
 
             const cleanupDragStates = () => {
-                if (dragInfo.current.longPressTimer) {
-                    clearTimeout(dragInfo.current.longPressTimer);
-                }
-                dragInfo.current = { isDragging: false, itemId: null, isTierLabel: false, startX: 0, startY: 0, longPressTimer: null };
-                setDragGhost(null);
                 setDraggedItemId(null);
                 setDraggedTierId(null);
                 setDraggedOverItemId(null);
@@ -1153,172 +1091,84 @@
                 setDraggedOverTierAreaId(null);
             };
 
-            const handlePointerDown = (e, id, isTier = false) => {
-                if (!e.isPrimary) return;
-
-                e.preventDefault();
-
-                dragInfo.current.itemId = id;
-                dragInfo.current.isTierLabel = isTier;
-                dragInfo.current.startX = e.clientX;
-                dragInfo.current.startY = e.clientY;
-
-                dragInfo.current.longPressTimer = setTimeout(() => {
-                    dragInfo.current.isDragging = true;
-                    if (isTier) {
-                        setDraggedTierId(id);
-                    } else {
-                        setDraggedItemId(id);
-                        const item = items.find(i => i.id === id);
-                        if (item) {
-                            setDragGhost({
-                                item: item,
-                                x: e.clientX,
-                                y: e.clientY,
-                            });
-                        }
-                    }
-                }, 200);
-
-                window.addEventListener('pointermove', handlePointerMove);
-                window.addEventListener('pointerup', handlePointerUp);
-                window.addEventListener('pointercancel', handlePointerUp);
+            const handleItemDragStart = (e, itemId) => {
+                setDraggedItemId(itemId);
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', itemId);
             };
 
-            const handlePointerMove = (e) => {
-                if (!e.isPrimary) return;
+            const handleTierLabelDragStart = (e, tierId) => {
+                setDraggedTierId(tierId);
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', tierId);
+            };
 
-                const { clientX, clientY } = e;
-                const { startX, startY, isDragging, longPressTimer } = dragInfo.current;
-
-                if (!isDragging) {
-                    const deltaX = clientX - startX;
-                    const deltaY = clientY - startY;
-                    if (Math.sqrt(deltaX * deltaX + deltaY * deltaY) > 10) {
-                        clearTimeout(longPressTimer);
-                        dragInfo.current.longPressTimer = null;
-                        handlePointerUp(e);
-                    }
-                    return;
-                }
-
+            const handleDragOver = (e) => {
                 e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            };
 
-                setDragGhost(prev => (prev ? { ...prev, x: clientX, y: clientY } : null));
-
-                const ghostEl = document.getElementById('drag-ghost');
-                if (ghostEl) ghostEl.style.display = 'none';
-                const targetEl = document.elementFromPoint(clientX, clientY);
-                if (ghostEl) ghostEl.style.display = 'flex';
-
-                if (!targetEl) return;
-
-                if (dragInfo.current.isTierLabel) {
-                    const tierRow = targetEl.closest('[data-tier-row-id]');
-                    setDraggedOverTierRowId(tierRow ? tierRow.dataset.tierRowId : null);
-                    return;
+            const handleTierRowDragOver = (e, targetTierId) => {
+                e.preventDefault();
+                if (draggedTierId && draggedTierId !== targetTierId) {
+                    setDraggedOverTierRowId(targetTierId);
                 }
+            };
 
-                const tierArea = targetEl.closest('[data-droptarget-tier-id]');
-                const targetItemEl = targetEl.closest('[id^="item-"]');
+            const handleTierRowDragLeave = (e) => {
+                 setDraggedOverTierRowId(null);
+            };
 
-                if (tierArea) {
-                    const tierId = tierArea.dataset.droptargetTierId === 'null' ? null : tierArea.dataset.droptargetTierId;
+            const handleTierAreaDragEnter = (e, tierId) => {
+                e.preventDefault();
+                if(draggedItemId) {
                     setDraggedOverTierAreaId(tierId);
-
-                    if (targetItemEl) {
-                        const targetItemId = targetItemEl.id.replace('item-', '');
-                        setDraggedOverItemId(targetItemId !== draggedItemId ? targetItemId : null);
-                    } else {
-                        setDraggedOverItemId(null);
-                    }
-                } else {
-                    setDraggedOverTierAreaId(null);
                     setDraggedOverItemId(null);
                 }
             };
 
-            const handlePointerUp = (e) => {
-                window.removeEventListener('pointermove', handlePointerMove);
-                window.removeEventListener('pointerup', handlePointerUp);
-                window.removeEventListener('pointercancel', handlePointerUp);
+            const handleTierAreaDragLeave = (e) => {
+                setDraggedOverTierAreaId(null);
+            };
 
-                if (dragInfo.current.longPressTimer) {
-                    clearTimeout(dragInfo.current.longPressTimer);
+            const handleItemDragEnter = (e, targetItemId, targetItemTierId) => {
+                e.preventDefault();
+                if (draggedItemId && draggedItemId !== targetItemId) {
+                    setDraggedOverItemId(targetItemId);
+                    setDraggedOverTierAreaId(targetItemTierId);
                 }
+            };
 
-                if (dragInfo.current.isDragging) {
-                    const { clientX, clientY } = e;
+            const handleItemDragLeave = (e) => {
+                setDraggedOverItemId(null);
+            };
 
-                    // **FIX:** Manually hide the ghost element BEFORE checking the drop target.
-                    const ghostEl = document.getElementById('drag-ghost');
-                    if (ghostEl) {
-                        ghostEl.style.display = 'none';
+            const handleDrop = (e, targetTierId, beforeItemId = null) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const droppedId = e.dataTransfer.getData('text/plain');
+
+                // Check if we are dropping a tier
+                if (tiers.some(t => t.id === droppedId)) {
+                    if (draggedTierId && draggedTierId !== targetTierId) {
+                        setTiers(prev => {
+                            const dTier = prev.find(t => t.id === draggedTierId);
+                            if (!dTier) return prev;
+                            const remaining = prev.filter(t => t.id !== draggedTierId);
+                            const targetIdx = remaining.findIndex(t => t.id === targetTierId);
+                            if (targetIdx !== -1) {
+                                remaining.splice(targetIdx, 0, dTier);
+                            }
+                            return remaining;
+                        });
                     }
-
-                    // Defer the drop logic to allow React to re-render and remove the ghost
-                    setTimeout(() => {
-                        addLog(`PointerUp at (${clientX.toFixed(0)}, ${clientY.toFixed(0)})`, 'event');
-
-                        const elementsUnderPointer = document.elementsFromPoint(clientX, clientY);
-                        addLog(`Elements under pointer: [${elementsUnderPointer.map(el => `${el.tagName}#${el.id || ''}.${el.className.split(' ')[0] || ''}`).join(', ')}]`, 'info');
-
-                        let finalTargetTierArea = null;
-                        let finalTargetItemEl = null;
-
-                        for (const el of elementsUnderPointer) {
-                            if (!finalTargetTierArea) {
-                                finalTargetTierArea = el.closest('[data-droptarget-tier-id]');
-                            }
-                            if (!finalTargetItemEl) {
-                                finalTargetItemEl = el.closest('[id^="item-"]');
-                            }
-                            if (finalTargetTierArea && finalTargetItemEl) break;
-                        }
-
-                        if (draggedTierId) {
-                            const finalTierRow = elementsUnderPointer.find(el => el.closest('[data-tier-row-id]'));
-                            if (finalTierRow) {
-                                const finalTargetTierId = finalTierRow.closest('[data-tier-row-id]').dataset.tierRowId;
-                                addLog(`Tier ${draggedTierId} dropped on tier ${finalTargetTierId}`, 'action');
-                                 setTiers(prev => {
-                                    const dTier = prev.find(t => t.id === draggedTierId); if (!dTier) return prev;
-                                    const remaining = prev.filter(t => t.id !== draggedTierId);
-                                    const targetIdx = remaining.findIndex(t => t.id === finalTargetTierId);
-                                    if (targetIdx !== -1 && draggedTierId !== finalTargetTierId) {
-                                         remaining.splice(targetIdx, 0, dTier);
-                                         return remaining;
-                                    }
-                                    return prev;
-                                });
-                            }
-                        } else if (draggedItemId) {
-                            if (finalTargetTierArea) {
-                                addLog(`Found drop target area: ${finalTargetTierArea.dataset.droptargetTierId}`, 'info');
-                                const finalTargetTierId = finalTargetTierArea.dataset.droptargetTierId === 'null' ? null : finalTargetTierArea.dataset.droptargetTierId;
-                                let beforeItemId = null;
-                                if (finalTargetItemEl) {
-                                    const finalTargetItemId = finalTargetItemEl.id.replace('item-', '');
-                                    addLog(`Found item to drop before: ${finalTargetItemId}`, 'info');
-                                    if(finalTargetItemId !== draggedItemId) {
-                                        beforeItemId = finalTargetItemId;
-                                    } else {
-                                         addLog(`Drop target is the item itself, ignoring.`, 'warning');
-                                    }
-                                }
-                                addLog(`Calling moveItem(${draggedItemId}, ${finalTargetTierId}, ${beforeItemId})`, 'action');
-                                moveItem(draggedItemId, finalTargetTierId, beforeItemId);
-                            } else {
-                                 addLog(`No valid drop target area found at drop location. Reverting.`, 'error');
-                            }
-                        }
-                        // Cleanup happens after the logic runs
-                        cleanupDragStates();
-                    }, 0);
-                    return; // Exit early to let the timeout handle cleanup
+                }
+                // Check if we are dropping an item
+                else if (items.some(i => i.id === droppedId)) {
+                    moveItem(droppedId, targetTierId, beforeItemId);
                 }
 
-                // If it wasn't a drag, clean up immediately
                 cleanupDragStates();
             };
 
@@ -1326,42 +1176,38 @@
             const handleItemClick = useCallback((itemId) => {
                 setSelectedItemId(prevSelectedId => {
                     if (prevSelectedId === itemId) {
-                        addLog(`Item deselected. Entering Navigation Mode.`, 'event');
+                        setAnnouncement(`Item deselected.`);
                         return null;
                     } else {
                         const item = items.find(i => i.id === itemId);
                         if (item) {
-                            addLog(`Item selected. Entering Move Mode.`, 'event');
                             setAnnouncement(`Item ${item.value || 'image'} selected. Use arrow keys to move, or Escape to deselect.`);
                             return itemId;
                         }
                         return prevSelectedId;
                     }
                 });
-            }, [items, addLog]);
+            }, [items]);
 
             const handleTierClick = useCallback((tierId) => {
                 setSelectedTierId(prevSelectedId => {
                     if (prevSelectedId === tierId) {
-                        addLog(`Tier deselected. Entering Navigation Mode.`, 'event');
                         setAnnouncement(`Tier deselected.`);
                         return null;
                     } else {
                         const tier = tiers.find(t => t.id === tierId);
                         if (tier) {
-                            addLog(`Tier selected. Entering Move Mode.`, 'event');
                             setAnnouncement(`Tier ${tier.value} selected. Use arrow keys to reorder, or Escape to deselect.`);
                             return tierId;
                         }
                         return prevSelectedId;
                     }
                 });
-            }, [tiers, addLog]);
+            }, [tiers]);
 
             const handleSelectNextItemInPool = useCallback(() => {
                 const unassignedItems = items.filter(item => item.tierId === null);
                 if (unassignedItems.length === 0) {
-                    addLog("No items in the pool to select.", "info");
                     return;
                 }
                 const currentSelectedIndexInPool = unassignedItems.findIndex(item => item.id === selectedItemId);
@@ -1375,7 +1221,7 @@
                     handleItemClick(nextItem.id);
                     lastManuallySelectedId.current = nextItem.id;
                 }
-            }, [items, selectedItemId, handleItemClick, addLog]);
+            }, [items, selectedItemId, handleItemClick]);
 
 
             useEffect(() => {
@@ -1386,13 +1232,12 @@
                     if (e.key === '/' || e.key === '?') {
                         e.preventDefault();
                         setShowCommandsPopover(prev => !prev);
-                        addLog(showCommandsPopover ? 'Closed keyboard commands popover.' : 'Opened keyboard commands popover.', 'event');
                         return;
                     }
 
                     if (showCommandsPopover) return;
 
-                    if (e.key.toLowerCase() === 'f') { e.preventDefault(); toggleFullScreen(); addLog('Action: Toggled fullscreen with F key', 'action'); return; }
+                    if (e.key.toLowerCase() === 'f') { e.preventDefault(); toggleFullScreen(); return; }
                     
                     if (['n', 'e'].includes(e.key.toLowerCase())) {
                         e.preventDefault();
@@ -1407,7 +1252,6 @@
                     const mappedKey = keyMap[e.key.toLowerCase()] || e.key;
                     if (e.key === ' ' || e.key === 'Enter') {
                         e.preventDefault();
-                        addLog(`Action: Toggling selection for ${activeElement.id} with ${e.key}`, 'action');
                         if (type === 'item') handleItemClick(id); else if (type === 'tierlabel') handleTierClick(id);
                         return;
                     }
@@ -1420,7 +1264,6 @@
                     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(mappedKey)) {
                         e.preventDefault();
                         if (selectedItemId) {
-                            addLog(`Move Mode: Arrow key ${mappedKey} for item ${selectedItemId}`, 'action');
                             const item = items.find(i => i.id === selectedItemId);
                             if (!item) return;
                             const currentTierId = item.tierId;
@@ -1448,7 +1291,6 @@
                                 }));
                             }
                         } else if (selectedTierId) {
-                            addLog(`Move Mode: Arrow key ${mappedKey} for tier ${selectedTierId}`, 'action');
                             if (mappedKey === 'ArrowUp' || mappedKey === 'ArrowDown') {
                                 setTiers(prev => {
                                     const tierIndex = prev.findIndex(t => t.id === selectedTierId);
@@ -1466,14 +1308,13 @@
                                 });
                             }
                         } else {
-                            addLog(`Navigation Mode: Arrow key ${mappedKey} from ${activeElement.id}`, 'action');
                             handleNavigation(mappedKey, activeElement.id);
                         }
                     }
                 };
                 document.addEventListener('keydown', handleKeyDown);
                 return () => document.removeEventListener('keydown', handleKeyDown);
-            }, [selectedItemId, selectedTierId, items, tiers, moveItem, handleItemClick, handleTierClick, addLog, handleSelectNextItemInPool, toggleFullScreen, showCommandsPopover]);
+            }, [selectedItemId, selectedTierId, items, tiers, moveItem, handleItemClick, handleTierClick, handleSelectNextItemInPool, toggleFullScreen, showCommandsPopover]);
 
             const { focusableGrid, focusableMap } = useMemo(() => {
                 const grid = []; const map = {};
@@ -1555,13 +1396,20 @@
             const dragState = { draggedItemId, draggedTierId, draggedOverItemId, draggedOverTierRowId, draggedOverTierAreaId, selectedItemId, selectedTierId };
             const itemProps = { itemWidth, itemHeight, tierLabelWidth };
             const itemSetters = { setItemWidth, setItemHeight, setTierLabelWidth };
-            const allHandlers = { handlePointerDown, handleDeleteItem, handleDeleteTier, startEditingTier, addLog, handleAddTier, handleAddItem, handlePasteItems, handleResetAllItemsToPool, handleSaveEditedTier, cancelEditingTier, handleExportState, handleImportState, handleItemImageUpload, handleExportImage, handleItemClick, handleTierClick, handleClearAllData, handleNewTierList, handleExportAllStates, handleOpenTierList };
-            const uiState = { showConfiguration, editingTierId, showLogs };
-            const uiSetters = { setShowConfiguration, setShowLogs, handleSelectFirstItemInPool };
-            const data = { logs, standardColors };
+            const allHandlers = {
+                handleItemDragStart, handleTierLabelDragStart, handleDragOver, handleTierRowDragOver, handleTierRowDragLeave,
+                handleTierAreaDragEnter, handleTierAreaDragLeave, handleItemDragEnter, handleItemDragLeave, handleDrop,
+                cleanupDragStates, handleDeleteItem, handleDeleteTier, startEditingTier, handleAddItem, handlePasteItems,
+                handleResetAllItemsToPool, handleSaveEditedTier, cancelEditingTier, handleExportState, handleImportState,
+                handleItemImageUpload, handleExportImage, handleItemClick, handleTierClick, handleClearAllData,
+                handleNewTierList, handleExportAllStates, handleOpenTierList, handleAddTier
+            };
+            const uiState = { showConfiguration, editingTierId };
+            const uiSetters = { setShowConfiguration, handleSelectFirstItemInPool };
+            const data = { standardColors };
             const editState = { editingTierLabel, editingTierColor, newTierColor };
             const editSetters = { setEditingTierLabel, setEditingTierColor, setNewTierColor };
-            const refs = { newTierNameRef, newItemNameRef, newItemImageFileRef, newItemImageUrlRef, pasteItemsRef, importFileRef, logDisplayRef };
+            const refs = { newTierNameRef, newItemNameRef, newItemImageFileRef, newItemImageUrlRef, pasteItemsRef, importFileRef };
 
             const isSideLayout = poolPosition === 'right';
 
@@ -1569,28 +1417,9 @@
                 <div
                     className={`min-h-screen font-sans transition-colors duration-300 ${theme.bg} ${theme.text}`}
                 >
-                    {dragGhost && (
-                        <div
-                            id="drag-ghost"
-                            className={`fixed flex items-center justify-center rounded-sm shadow-lg z-50 pointer-events-none ${theme.itemBg} border ${theme.borderColor}`}
-                            style={{
-                                left: `${dragGhost.x}px`,
-                                top: `${dragGhost.y}px`,
-                                width: `${itemWidth}px`,
-                                height: `${itemHeight}px`,
-                                transform: 'translate(-50%, -50%) scale(1.05)', // Scale up for "lift" effect
-                            }}
-                        >
-                            {dragGhost.item.type === 'image' ? (
-                                <img src={dragGhost.item.value} alt="ghost" className="w-full h-full object-contain" />
-                            ) : (
-                                <span className={`text-sm font-medium ${theme.inputText} text-center p-1 break-all`}>{dragGhost.item.value}</span>
-                            )}
-                        </div>
-                    )}
                     {showCommandsPopover && <CommandsPopover theme={theme} onClose={() => setShowCommandsPopover(false)} />}
                     {showClearDataModal && <ConfirmationModal theme={theme} onConfirm={confirmClearAllData} onCancel={() => setShowClearDataModal(false)} title="Clear All Data?" message="This will permanently delete all tiers and items from your browser's storage and cannot be undone."/>}
-                    {showOpenModal && <OpenTierListModal theme={theme} onClose={() => setShowOpenModal(false)} addLog={addLog} />}
+                    {showOpenModal && <OpenTierListModal theme={theme} onClose={() => setShowOpenModal(false)} />}
                     <div aria-live="assertive" style={{ position: 'absolute', width: '1px', height: '1px', padding: '0', margin: '-1px', overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: '0' }}>{announcement}</div>
                     
                     <div ref={appContainerRef} className="mx-auto max-w-full flex flex-col gap-1 p-1">
@@ -1612,7 +1441,7 @@
                             >
                                 <div ref={tierListRef} className="w-full flex flex-col gap-1">
                                     {tiers.map((tier, index) => (
-                                        <TierRow key={tier.id} tier={tier} items={items} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} index={index} totalTiers={tiers.length} deleteMode={deleteMode} selectedTierId={selectedTierId} />
+                                        <TierRow key={tier.id} tier={tier} items={items} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} deleteMode={deleteMode} selectedTierId={selectedTierId} />
                                     ))}
                                 </div>
                                 {!isSideLayout && (
