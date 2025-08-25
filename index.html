@@ -1249,11 +1249,14 @@
 
                 if (dragInfo.current.isDragging) {
                     const { clientX, clientY } = e;
+                    addLog(`PointerUp at (${clientX.toFixed(0)}, ${clientY.toFixed(0)})`, 'event');
+
                     const ghostEl = document.getElementById('drag-ghost');
                     if (ghostEl) ghostEl.style.display = 'none';
 
-                    // **FIX:** Use `elementsFromPoint` for robust target detection.
                     const elementsUnderPointer = document.elementsFromPoint(clientX, clientY);
+                    addLog(`Elements under pointer: [${elementsUnderPointer.map(el => (el.id || el.tagName)).join(', ')}]`, 'info');
+
                     let finalTargetTierArea = null;
                     let finalTargetItemEl = null;
 
@@ -1273,6 +1276,7 @@
                         const finalTierRow = elementsUnderPointer.find(el => el.closest('[data-tier-row-id]'));
                         if (finalTierRow) {
                             const finalTargetTierId = finalTierRow.closest('[data-tier-row-id]').dataset.tierRowId;
+                            addLog(`Tier ${draggedTierId} dropped on tier ${finalTargetTierId}`, 'action');
                              setTiers(prev => {
                                 const dTier = prev.find(t => t.id === draggedTierId); if (!dTier) return prev;
                                 const remaining = prev.filter(t => t.id !== draggedTierId);
@@ -1281,19 +1285,28 @@
                                      remaining.splice(targetIdx, 0, dTier);
                                      return remaining;
                                 }
-                                return prev; // Return original if drop is on itself or invalid
+                                return prev;
                             });
                         }
-                    } else if (draggedItemId && finalTargetTierArea) {
-                        const finalTargetTierId = finalTargetTierArea.dataset.droptargetTierId === 'null' ? null : finalTargetTierArea.dataset.droptargetTierId;
-                        let beforeItemId = null;
-                        if (finalTargetItemEl) {
-                            const finalTargetItemId = finalTargetItemEl.id.replace('item-', '');
-                            if(finalTargetItemId !== draggedItemId) {
-                                beforeItemId = finalTargetItemId;
+                    } else if (draggedItemId) {
+                        if (finalTargetTierArea) {
+                            addLog(`Found drop target area: ${finalTargetTierArea.dataset.droptargetTierId}`, 'info');
+                            const finalTargetTierId = finalTargetTierArea.dataset.droptargetTierId === 'null' ? null : finalTargetTierArea.dataset.droptargetTierId;
+                            let beforeItemId = null;
+                            if (finalTargetItemEl) {
+                                const finalTargetItemId = finalTargetItemEl.id.replace('item-', '');
+                                addLog(`Found item to drop before: ${finalTargetItemId}`, 'info');
+                                if(finalTargetItemId !== draggedItemId) {
+                                    beforeItemId = finalTargetItemId;
+                                } else {
+                                     addLog(`Drop target is the item itself, ignoring.`, 'warning');
+                                }
                             }
+                            addLog(`Calling moveItem(${draggedItemId}, ${finalTargetTierId}, ${beforeItemId})`, 'action');
+                            moveItem(draggedItemId, finalTargetTierId, beforeItemId);
+                        } else {
+                             addLog(`No valid drop target area found at drop location. Reverting.`, 'error');
                         }
-                        moveItem(draggedItemId, finalTargetTierId, beforeItemId);
                     }
                 }
 
