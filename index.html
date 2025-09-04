@@ -374,8 +374,6 @@
                         <div style={style}>
                             <div className={`w-full h-full flex items-center justify-center overflow-hidden ${
                             theme.itemBg
-                            } border ${
-                            theme.borderColor
                             } rounded-sm shadow-lg`}>
                                 {item.type === 'image' ? (
                                         <img src={item.value} alt={item.value || "Item"} className="w-full h-full object-contain"/>
@@ -416,10 +414,10 @@
                             onDragEnd={handlers.cleanupDragStates}
                             onTouchStart={(e) => handlers.handleTouchStart(e, item)}
                             className={`relative z-10 cursor-grab active:cursor-grabbing
-                                            ${
+                                        ${
                             draggedItemId === item.id ? 'opacity-30' : ''
                             }
-                                            ${
+                                        ${
                             selectedItemId === item.id ? 'keyboard-selected' : ''
                             }`}
                             style={{
@@ -430,13 +428,11 @@
                             <div
                                 className={`w-full h-full flex items-center justify-center overflow-hidden ${
                                 theme.itemBg
-                                } border ${
-                                theme.borderColor
                                 } rounded-sm shadow-sm transition-all duration-200
-                                        ${
+                                            ${
                                 draggedItemId === item.id ? 'ring-2 ring-indigo-500' : ''
                                 }
-                                        ${
+                                            ${
                                 draggedOverItemId === item.id && draggedItemId !== item.id ? 'drag-over-item' : ''
                                 }`}
                             >
@@ -511,7 +507,7 @@
                             onDragLeave={(e) => handlers.handleTierRowDragLeave(e)}
                             onDrop={(e) => handlers.handleDrop(e, tier.id)}
                             className={`flex items-stretch transition-all duration-200
-                                            ${
+                                        ${
                             draggedOverTierRowId === tier.id && draggedTierId && draggedTierId !== tier.id ? 'tier-row-drop-target' : ''
                             }`}
                             style={{ minHeight: `${minTierHeight}px` }}
@@ -556,15 +552,15 @@
                                     )}
                                 <>
                                     <button onClick={(e) => {
-                                            e.stopPropagation();
-                                            handlers.handleDeleteTier(tier.id);
-                                        }} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 z-20" aria-label={`Delete tier ${tier.value}`}>
+                                        e.stopPropagation();
+                                        handlers.handleDeleteTier(tier.id);
+                                    }} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 z-20" aria-label={`Delete tier ${tier.value}`}>
                                         <Trash2Icon size={14}/>
                                     </button>
                                     <button onClick={(e) => {
-                                            e.stopPropagation();
-                                            handlers.startEditingTier(tier);
-                                        }} className="absolute top-1 left-1 bg-gray-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 z-20" aria-label={`Edit tier ${tier.value} color`}>
+                                        e.stopPropagation();
+                                        handlers.startEditingTier(tier);
+                                    }} className="absolute top-1 left-1 bg-gray-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 z-20" aria-label={`Edit tier ${tier.value} color`}>
                                         <SettingsIcon size={14}/>
                                     </button>
                                 </>
@@ -2015,95 +2011,65 @@
                             // Check if we are dropping an item
                             else if (items.some(i => i.id === droppedId)) {
                             moveItem(droppedId, targetTierId, beforeItemId);
-                        }
-
-                        cleanupDragStates();
-                    };
-
-                    // --- Touch Handlers ---
-                    const handleTouchStart = (e, item) => {
-                        if (e.touches.length !== 1) return ;
-
-                        const touch = e.touches[0];
-                        const rect = e.currentTarget.getBoundingClientRect();
-
-                        setDraggedItemId(item.id); // Use existing state for visual feedback (opacity)
-
-                        setTouchInfo({
-                            itemId: item.id,
-                            itemData: item,
-                            initialX: touch.clientX,
-                            initialY: touch.clientY,
-                            currentX: touch.clientX,
-                            currentY: touch.clientY,
-                            offsetX: touch.clientX - rect.left,
-                            offsetY: touch.clientY - rect.top,
-                        });
-                    };
-
-                    useEffect(() => {
-                        const handleTouchMove = (e) => {
-                            if (e.touches.length !== 1 || !touchInfo.itemId) return;
-
-                            // This preventDefault is important to stop the whole page from scrolling on mobile
-                            // while an item is being dragged.
-                            e.preventDefault();
-
-                            const touch = e.touches[0];
-
-                            // Auto-scroll logic for mobile drag
-                            const scrollThreshold = 80; // pixels from the edge to trigger scroll
-                            const scrollSpeed = 10; // pixels to scroll per frame
-
-                            if (touch.clientY < scrollThreshold) {
-                                window.scrollBy(0, -scrollSpeed);
-                            } else if (touch.clientY > window.innerHeight - scrollThreshold) {
-                                window.scrollBy(0, scrollSpeed);
                             }
 
-                            setTouchInfo(prev => ({
-                                ...prev,
-                                currentX: touch.clientX,
-                                currentY: touch.clientY
-                            }));
-
-                            const elementOver = document.elementFromPoint(touch.clientX, touch.clientY);
-                            if (!elementOver) {
-                                setDraggedOverItemId(null);
-                                setDraggedOverTierAreaId(null);
-                                return;
-                            }
-
-                            const dropTargetItem = elementOver.closest(`[id^="item-"]`);
-                            const dropTargetTierArea = elementOver.closest('[data-droptarget-tier-id]');
-
-                            if (dropTargetItem && dropTargetItem.id !== `item-${touchInfo.itemId}`) {
-                                const targetItemId = dropTargetItem.id.replace('item-', '');
-                                const targetItem = items.find(i => i.id === targetItemId);
-                                if (targetItem) {
-                                    setDraggedOverItemId(targetItemId);
-                                    setDraggedOverTierAreaId(targetItem.tierId);
-                                }
-                            } else if (dropTargetTierArea) {
-                                const tierIdStr = dropTargetTierArea.dataset.droptargetTierId;
-                                setDraggedOverTierAreaId(tierIdStr === 'null' ? null : tierIdStr);
-                                setDraggedOverItemId(null);
-                            } else {
-                                setDraggedOverItemId(null);
-                                setDraggedOverTierAreaId(null);
-                            }
+                            cleanupDragStates();
                         };
 
-                        const handleTouchEnd = (e) => {
-                            if (!touchInfo.itemId) return;
+                        // --- Touch Handlers ---
+                        const handleTouchStart = (e, item) => {
+                            if (e.touches.length !== 1) return ;
 
-                            const touch = e.changedTouches[0];
-                            const elementOver = document.elementFromPoint(touch.clientX, touch.clientY);
+                            const touch = e.touches[0];
+                            const rect = e.currentTarget.getBoundingClientRect();
 
-                            let finalTargetTierId = null;
-                            let finalBeforeItemId = null;
+                            setDraggedItemId(item.id); // Use existing state for visual feedback (opacity)
 
-                            if (elementOver) {
+                            setTouchInfo({
+                                itemId: item.id,
+                                itemData: item,
+                                initialX: touch.clientX,
+                                initialY: touch.clientY,
+                                currentX: touch.clientX,
+                                currentY: touch.clientY,
+                                offsetX: touch.clientX - rect.left,
+                                offsetY: touch.clientY - rect.top,
+                            });
+                        };
+
+                        useEffect(() => {
+                            const handleTouchMove = (e) => {
+                                if (e.touches.length !== 1 || !touchInfo.itemId) return;
+
+                                // This preventDefault is important to stop the whole page from scrolling on mobile
+                                // while an item is being dragged.
+                                e.preventDefault();
+
+                                const touch = e.touches[0];
+
+                                // Auto-scroll logic for mobile drag
+                                const scrollThreshold = 80; // pixels from the edge to trigger scroll
+                                const scrollSpeed = 10; // pixels to scroll per frame
+
+                                if (touch.clientY < scrollThreshold) {
+                                    window.scrollBy(0, -scrollSpeed);
+                                } else if (touch.clientY > window.innerHeight - scrollThreshold) {
+                                    window.scrollBy(0, scrollSpeed);
+                                }
+
+                                setTouchInfo(prev => ({
+                                    ...prev,
+                                    currentX: touch.clientX,
+                                    currentY: touch.clientY
+                                }));
+
+                                const elementOver = document.elementFromPoint(touch.clientX, touch.clientY);
+                                if (!elementOver) {
+                                    setDraggedOverItemId(null);
+                                    setDraggedOverTierAreaId(null);
+                                    return;
+                                }
+
                                 const dropTargetItem = elementOver.closest(`[id^="item-"]`);
                                 const dropTargetTierArea = elementOver.closest('[data-droptarget-tier-id]');
 
@@ -2111,513 +2077,542 @@
                                     const targetItemId = dropTargetItem.id.replace('item-', '');
                                     const targetItem = items.find(i => i.id === targetItemId);
                                     if (targetItem) {
-                                        finalBeforeItemId = targetItemId;
-                                        finalTargetTierId = targetItem.tierId;
+                                        setDraggedOverItemId(targetItemId);
+                                        setDraggedOverTierAreaId(targetItem.tierId);
                                     }
                                 } else if (dropTargetTierArea) {
                                     const tierIdStr = dropTargetTierArea.dataset.droptargetTierId;
-                                    finalTargetTierId = tierIdStr === 'null' ? null : tierIdStr;
-                                }
-                            }
-
-                            moveItem(touchInfo.itemId, finalTargetTierId, finalBeforeItemId);
-                            cleanupDragStates();
-                        };
-
-                        if (touchInfo.itemId) {
-                            window.addEventListener('touchmove', handleTouchMove, { passive: false });
-                            window.addEventListener('touchend', handleTouchEnd);
-                            window.addEventListener('touchcancel', handleTouchEnd);
-                        }
-
-                        return () => {
-                            window.removeEventListener('touchmove', handleTouchMove);
-                            window.removeEventListener('touchend', handleTouchEnd);
-                            window.removeEventListener('touchcancel', handleTouchEnd);
-                        };
-                    }, [touchInfo.itemId, items, moveItem]);
-
-
-                    const handleItemClick = useCallback((itemId) => {
-                        setSelectedItemId(prevSelectedId => {
-                            if (prevSelectedId === itemId) {
-                                setAnnouncement(`Item deselected.`);
-                                return null;
-                            } else {
-                                const item = items.find(i => i.id === itemId);
-                                if (item) {
-                                    setAnnouncement(`Item ${
-                                    item.value || 'image'
-                                    } selected. Use arrow keys to move, or Escape to deselect.`);
-                                    return itemId;
-                                }
-                                return prevSelectedId;
-                            }
-                        });
-                    }, [items]);
-
-                    const handleTierClick = useCallback((tierId) => {
-                        setSelectedTierId(prevSelectedId => {
-                            if (prevSelectedId === tierId) {
-                                setAnnouncement(`Tier deselected.`);
-                                return null;
-                            } else {
-                                const tier = tiers.find(t => t.id === tierId);
-                                if (tier) {
-                                    setAnnouncement(`Tier ${
-                                    tier.value
-                                    } selected. Use arrow keys to reorder, or Escape to deselect.`);
-                                    return tierId;
-                                }
-                                return prevSelectedId;
-                            }
-                        });
-                    }, [tiers]);
-
-                    const handleSelectNextItemInPool = useCallback(() => {
-                        const unassignedItems = items.filter(item => item.tierId === null);
-                        if (unassignedItems.length === 0) {
-                            return ;
-                        }
-                        const currentSelectedIndexInPool = unassignedItems.findIndex(item => item.id === selectedItemId);
-                        let nextItem;
-                        if (currentSelectedIndexInPool !== -1 && currentSelectedIndexInPool < unassignedItems.length - 1) {
-                            nextItem = unassignedItems[currentSelectedIndexInPool + 1];
-                        } else {
-                            nextItem = unassignedItems[0];
-                        }
-                        if (nextItem) {
-                            handleItemClick(nextItem.id);
-                            lastManuallySelectedId.current = nextItem.id;
-                        }
-                    }, [items, selectedItemId, handleItemClick]);
-
-
-                    useEffect(() => {
-                        const handleKeyDown = (e) => {
-                            const activeElement = document.activeElement;
-                            if (!activeElement || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return ;
-
-                            if (e.key === '/' || e.key === '?') {
-                                e.preventDefault();
-                                setShowCommandsPopover(prev => !prev);
-                                return ;
-                            }
-
-                            if (showCommandsPopover) return ;
-
-                            if (e.key.toLowerCase() === 'f') {
-                                e.preventDefault();
-                                toggleFullScreen(); return ;
-                            }
-
-                            if (['n', 'e'].includes(e.key.toLowerCase())) {
-                                e.preventDefault();
-                                handleSelectNextItemInPool();
-                                return ;
-                            }
-
-                            if (!activeElement.id) return ;
-                            const [type, id] = activeElement.id.split(/-(.+)/);
-                            if (!id) return ;
-                            const keyMap = {
-                                'w': 'ArrowUp',
-                                'a': 'ArrowLeft',
-                                's': 'ArrowDown',
-                                'd': 'ArrowRight'
-                            };
-                            const mappedKey = keyMap[e.key.toLowerCase()] || e.key;
-                            if (e.key === ' ' || e.key === 'Enter') {
-                                e.preventDefault();
-                                if (type === 'item') handleItemClick(id); else if (type === 'tierlabel') handleTierClick(id);
-                                return ;
-                            }
-                            if (e.key === 'Escape') {
-                                e.preventDefault();
-                                if (selectedItemId) {
-                                    lastManuallySelectedId.current = selectedItemId;
-                                    handleItemClick(selectedItemId);
-                                }
-                                else if (selectedTierId) {
-                                    lastMovedTierId.current = selectedTierId;
-                                    handleTierClick(selectedTierId);
-                                }
-                                return ;
-                            }
-                            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(mappedKey)) {
-                                e.preventDefault();
-                                if (selectedItemId) {
-                                    const item = items.find(i => i.id === selectedItemId);
-                                    if (!item) return ;
-                                    const currentTierId = item.tierId;
-                                    if (mappedKey === 'ArrowUp' || mappedKey === 'ArrowDown') {
-                                        const tierIds = [null, ...tiers.map(t => t.id)];
-                                        const currentTierIndex = tierIds.indexOf(currentTierId);
-                                        let nextTierIndex = mappedKey === 'ArrowUp' ? (currentTierIndex > 0 ? currentTierIndex - 1 : tierIds.length - 1) : (currentTierIndex < tierIds.length - 1 ? currentTierIndex + 1 : 0);
-                                        const nextTierId = tierIds[nextTierIndex];
-                                        moveItem(selectedItemId, nextTierId);
-                                    } else {
-                                        setTiers(prevTiers => prevTiers.map(tier => {
-                                            if (tier.id === currentTierId) {
-                                                const itemIndex = tier.items.indexOf(selectedItemId);
-                                                if (itemIndex === -1) return tier;
-                                                const newItems = [...tier.items];
-                                                const newIndex = mappedKey === 'ArrowLeft' ? Math.max(0, itemIndex - 1) : Math.min(newItems.length - 1, itemIndex + 1);
-                                                if (newIndex !== itemIndex) {
-                                                    [newItems[itemIndex], newItems[newIndex]] = [newItems[newIndex], newItems[itemIndex]];
-                                                    setAnnouncement(`Item moved ${
-                                                    mappedKey === 'ArrowLeft' ? 'left' : 'right'
-                                                    }.`);
-                                                    lastManuallySelectedId.current = selectedItemId;
-                                                }
-                                                return { ...tier, items: newItems };
-                                            }
-                                            return tier;
-                                        }));
-                                    }
-                                } else if (selectedTierId) {
-                                    if (mappedKey === 'ArrowUp' || mappedKey === 'ArrowDown') {
-                                        setTiers(prev => {
-                                            const tierIndex = prev.findIndex(t => t.id === selectedTierId);
-                                            if (tierIndex === -1) return prev;
-                                            const newIndex = mappedKey === 'ArrowUp' ? Math.max(0, tierIndex - 1) : Math.min(prev.length - 1, tierIndex + 1);
-                                            if (newIndex !== tierIndex) {
-                                                const newTiers = [...prev];
-                                                const [movedTier] = newTiers.splice(tierIndex, 1);
-                                                newTiers.splice(newIndex, 0, movedTier);
-                                                setAnnouncement(`Tier moved ${
-                                                mappedKey === 'ArrowUp' ? 'up' : 'down'
-                                                }.`);
-                                                lastMovedTierId.current = selectedTierId;
-                                                return newTiers;
-                                            }
-                                            return prev;
-                                        });
-                                    }
+                                    setDraggedOverTierAreaId(tierIdStr === 'null' ? null : tierIdStr);
+                                    setDraggedOverItemId(null);
                                 } else {
-                                    handleNavigation(mappedKey, activeElement.id);
+                                    setDraggedOverItemId(null);
+                                    setDraggedOverTierAreaId(null);
                                 }
+                            };
+
+                            const handleTouchEnd = (e) => {
+                                if (!touchInfo.itemId) return;
+
+                                const touch = e.changedTouches[0];
+                                const elementOver = document.elementFromPoint(touch.clientX, touch.clientY);
+
+                                let finalTargetTierId = null;
+                                let finalBeforeItemId = null;
+
+                                if (elementOver) {
+                                    const dropTargetItem = elementOver.closest(`[id^="item-"]`);
+                                    const dropTargetTierArea = elementOver.closest('[data-droptarget-tier-id]');
+
+                                    if (dropTargetItem && dropTargetItem.id !== `item-${touchInfo.itemId}`) {
+                                        const targetItemId = dropTargetItem.id.replace('item-', '');
+                                        const targetItem = items.find(i => i.id === targetItemId);
+                                        if (targetItem) {
+                                            finalBeforeItemId = targetItemId;
+                                            finalTargetTierId = targetItem.tierId;
+                                        }
+                                    } else if (dropTargetTierArea) {
+                                        const tierIdStr = dropTargetTierArea.dataset.droptargetTierId;
+                                        finalTargetTierId = tierIdStr === 'null' ? null : tierIdStr;
+                                    }
+                                }
+
+                                moveItem(touchInfo.itemId, finalTargetTierId, finalBeforeItemId);
+                                cleanupDragStates();
+                            };
+
+                            if (touchInfo.itemId) {
+                                window.addEventListener('touchmove', handleTouchMove, { passive: false });
+                                window.addEventListener('touchend', handleTouchEnd);
+                                window.addEventListener('touchcancel', handleTouchEnd);
+                            }
+
+                            return () => {
+                                window.removeEventListener('touchmove', handleTouchMove);
+                                window.removeEventListener('touchend', handleTouchEnd);
+                                window.removeEventListener('touchcancel', handleTouchEnd);
+                            };
+                        }, [touchInfo.itemId, items, moveItem]);
+
+
+                        const handleItemClick = useCallback((itemId) => {
+                            setSelectedItemId(prevSelectedId => {
+                                if (prevSelectedId === itemId) {
+                                    setAnnouncement(`Item deselected.`);
+                                    return null;
+                                } else {
+                                    const item = items.find(i => i.id === itemId);
+                                    if (item) {
+                                        setAnnouncement(`Item ${
+                                        item.value || 'image'
+                                        } selected. Use arrow keys to move, or Escape to deselect.`);
+                                        return itemId;
+                                    }
+                                    return prevSelectedId;
+                                }
+                            });
+                        }, [items]);
+
+                        const handleTierClick = useCallback((tierId) => {
+                            setSelectedTierId(prevSelectedId => {
+                                if (prevSelectedId === tierId) {
+                                    setAnnouncement(`Tier deselected.`);
+                                    return null;
+                                } else {
+                                    const tier = tiers.find(t => t.id === tierId);
+                                    if (tier) {
+                                        setAnnouncement(`Tier ${
+                                        tier.value
+                                        } selected. Use arrow keys to reorder, or Escape to deselect.`);
+                                        return tierId;
+                                    }
+                                    return prevSelectedId;
+                                }
+                            });
+                        }, [tiers]);
+
+                        const handleSelectNextItemInPool = useCallback(() => {
+                            const unassignedItems = items.filter(item => item.tierId === null);
+                            if (unassignedItems.length === 0) {
+                                return ;
+                            }
+                            const currentSelectedIndexInPool = unassignedItems.findIndex(item => item.id === selectedItemId);
+                            let nextItem;
+                            if (currentSelectedIndexInPool !== -1 && currentSelectedIndexInPool < unassignedItems.length - 1) {
+                                nextItem = unassignedItems[currentSelectedIndexInPool + 1];
+                            } else {
+                                nextItem = unassignedItems[0];
+                            }
+                            if (nextItem) {
+                                handleItemClick(nextItem.id);
+                                lastManuallySelectedId.current = nextItem.id;
+                            }
+                        }, [items, selectedItemId, handleItemClick]);
+
+
+                        useEffect(() => {
+                            const handleKeyDown = (e) => {
+                                const activeElement = document.activeElement;
+                                if (!activeElement || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return ;
+
+                                if (e.key === '/' || e.key === '?') {
+                                    e.preventDefault();
+                                    setShowCommandsPopover(prev => !prev);
+                                    return ;
+                                }
+
+                                if (showCommandsPopover) return ;
+
+                                if (e.key.toLowerCase() === 'f') {
+                                    e.preventDefault();
+                                    toggleFullScreen(); return ;
+                                }
+
+                                if (['n', 'e'].includes(e.key.toLowerCase())) {
+                                    e.preventDefault();
+                                    handleSelectNextItemInPool();
+                                    return ;
+                                }
+
+                                if (!activeElement.id) return ;
+                                const [type, id] = activeElement.id.split(/-(.+)/);
+                                if (!id) return ;
+                                const keyMap = {
+                                    'w': 'ArrowUp',
+                                    'a': 'ArrowLeft',
+                                    's': 'ArrowDown',
+                                    'd': 'ArrowRight'
+                                };
+                                const mappedKey = keyMap[e.key.toLowerCase()] || e.key;
+                                if (e.key === ' ' || e.key === 'Enter') {
+                                    e.preventDefault();
+                                    if (type === 'item') handleItemClick(id); else if (type === 'tierlabel') handleTierClick(id);
+                                    return ;
+                                }
+                                if (e.key === 'Escape') {
+                                    e.preventDefault();
+                                    if (selectedItemId) {
+                                        lastManuallySelectedId.current = selectedItemId;
+                                        handleItemClick(selectedItemId);
+                                    }
+                                    else if (selectedTierId) {
+                                        lastMovedTierId.current = selectedTierId;
+                                        handleTierClick(selectedTierId);
+                                    }
+                                    return ;
+                                }
+                                if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(mappedKey)) {
+                                    e.preventDefault();
+                                    if (selectedItemId) {
+                                        const item = items.find(i => i.id === selectedItemId);
+                                        if (!item) return ;
+                                        const currentTierId = item.tierId;
+                                        if (mappedKey === 'ArrowUp' || mappedKey === 'ArrowDown') {
+                                            const tierIds = [null, ...tiers.map(t => t.id)];
+                                            const currentTierIndex = tierIds.indexOf(currentTierId);
+                                            let nextTierIndex = mappedKey === 'ArrowUp' ? (currentTierIndex > 0 ? currentTierIndex - 1 : tierIds.length - 1) : (currentTierIndex < tierIds.length - 1 ? currentTierIndex + 1 : 0);
+                                            const nextTierId = tierIds[nextTierIndex];
+                                            moveItem(selectedItemId, nextTierId);
+                                        } else {
+                                            setTiers(prevTiers => prevTiers.map(tier => {
+                                                if (tier.id === currentTierId) {
+                                                    const itemIndex = tier.items.indexOf(selectedItemId);
+                                                    if (itemIndex === -1) return tier;
+                                                    const newItems = [...tier.items];
+                                                    const newIndex = mappedKey === 'ArrowLeft' ? Math.max(0, itemIndex - 1) : Math.min(newItems.length - 1, itemIndex + 1);
+                                                    if (newIndex !== itemIndex) {
+                                                        [newItems[itemIndex], newItems[newIndex]] = [newItems[newIndex], newItems[itemIndex]];
+                                                        setAnnouncement(`Item moved ${
+                                                        mappedKey === 'ArrowLeft' ? 'left' : 'right'
+                                                        }.`);
+                                                        lastManuallySelectedId.current = selectedItemId;
+                                                    }
+                                                    return { ...tier, items: newItems };
+                                                }
+                                                return tier;
+                                            }));
+                                        }
+                                    } else if (selectedTierId) {
+                                        if (mappedKey === 'ArrowUp' || mappedKey === 'ArrowDown') {
+                                            setTiers(prev => {
+                                                const tierIndex = prev.findIndex(t => t.id === selectedTierId);
+                                                if (tierIndex === -1) return prev;
+                                                const newIndex = mappedKey === 'ArrowUp' ? Math.max(0, tierIndex - 1) : Math.min(prev.length - 1, tierIndex + 1);
+                                                if (newIndex !== tierIndex) {
+                                                    const newTiers = [...prev];
+                                                    const [movedTier] = newTiers.splice(tierIndex, 1);
+                                                    newTiers.splice(newIndex, 0, movedTier);
+                                                    setAnnouncement(`Tier moved ${
+                                                    mappedKey === 'ArrowUp' ? 'up' : 'down'
+                                                    }.`);
+                                                    lastMovedTierId.current = selectedTierId;
+                                                    return newTiers;
+                                                }
+                                                return prev;
+                                            });
+                                        }
+                                    } else {
+                                        handleNavigation(mappedKey, activeElement.id);
+                                    }
+                                }
+                            };
+                            document.addEventListener('keydown', handleKeyDown);
+                            return () => document.removeEventListener('keydown', handleKeyDown);
+                        }, [selectedItemId, selectedTierId, items, tiers, moveItem, handleItemClick, handleTierClick, handleSelectNextItemInPool, toggleFullScreen, showCommandsPopover]);
+
+                        const { focusableGrid, focusableMap } = useMemo(() => {
+                            const grid = [];
+                            const map = {};
+                            tiers.forEach((tier) => {
+                                const row = [`tier-label-${tier.id}`];
+                                tier.items.forEach(itemId => { row.push(`item-${itemId}`); });
+                                grid.push(row);
+                            });
+                            const unassignedItems = items.filter(item => item.tierId === null);
+                            if (unassignedItems.length > 0) {
+                                grid.push(unassignedItems.map(item => `item-${item.id}`));
+                            }
+                            grid.forEach((row, rowIndex) => {
+                                row.forEach((id, colIndex) => {
+                                    map[id] = { row: rowIndex, col: colIndex };
+                                });
+                            });
+                            return {
+                                focusableGrid: grid,
+                                focusableMap: map
+                            };
+                        }, [tiers, items]);
+
+                        const handleNavigation = (key, currentId) => {
+                            if (!focusableMap[currentId]) return ;
+                            const { row: currentRow, col: currentCol } = focusableMap[currentId];
+                            let nextRow = currentRow, nextCol = currentCol;
+                            switch (key) {
+                                case 'ArrowUp': nextRow = currentRow > 0 ? currentRow - 1 : focusableGrid.length - 1;
+                                    break;
+                                case 'ArrowDown': nextRow = currentRow < focusableGrid.length - 1 ? currentRow + 1 : 0;
+                                    break;
+                                case 'ArrowLeft': if (currentCol > 0) nextCol = currentCol - 1;
+                                    break;
+                                case 'ArrowRight': if (currentCol < focusableGrid[currentRow].length - 1) nextCol = currentCol + 1;
+                                    break;
+                                default: return ;
+                            }
+                            if (key === 'ArrowUp' || key === 'ArrowDown') {
+                                nextCol = Math.min(currentCol, focusableGrid[nextRow].length - 1);
+                            }
+                            const nextId = focusableGrid[nextRow]?.[nextCol];
+                            if (nextId) {
+                                const nextElement = document.getElementById(nextId);
+                                if (nextElement) nextElement.focus();
                             }
                         };
-                        document.addEventListener('keydown', handleKeyDown);
-                        return () => document.removeEventListener('keydown', handleKeyDown);
-                    }, [selectedItemId, selectedTierId, items, tiers, moveItem, handleItemClick, handleTierClick, handleSelectNextItemInPool, toggleFullScreen, showCommandsPopover]);
 
-                    const { focusableGrid, focusableMap } = useMemo(() => {
-                        const grid = [];
-                        const map = {};
-                        tiers.forEach((tier) => {
-                            const row = [`tier-label-${tier.id}`];
-                            tier.items.forEach(itemId => { row.push(`item-${itemId}`); });
-                            grid.push(row);
-                        });
-                        const unassignedItems = items.filter(item => item.tierId === null);
-                        if (unassignedItems.length > 0) {
-                            grid.push(unassignedItems.map(item => `item-${item.id}`));
-                        }
-                        grid.forEach((row, rowIndex) => {
-                            row.forEach((id, colIndex) => {
-                                map[id] = { row: rowIndex, col: colIndex };
-                            });
-                        });
-                        return {
-                            focusableGrid: grid,
-                            focusableMap: map
-                        };
-                    }, [tiers, items]);
+                        useEffect(() => {
+                            if (lastManuallySelectedId.current) {
+                                const el = document.getElementById(`item-${lastManuallySelectedId.current}`);
+                                if (el) el.focus();
+                                lastManuallySelectedId.current = null;
+                            }
+                            if (lastMovedTierId.current) {
+                                const el = document.getElementById(`tier-label-${lastMovedTierId.current}`);
+                                if (el) el.focus();
+                                lastMovedTierId.current = null;
+                            }
+                        }, [items, tiers]);
 
-                    const handleNavigation = (key, currentId) => {
-                        if (!focusableMap[currentId]) return ;
-                        const { row: currentRow, col: currentCol } = focusableMap[currentId];
-                        let nextRow = currentRow, nextCol = currentCol;
-                        switch (key) {
-                            case 'ArrowUp': nextRow = currentRow > 0 ? currentRow - 1 : focusableGrid.length - 1;
-                                break;
-                            case 'ArrowDown': nextRow = currentRow < focusableGrid.length - 1 ? currentRow + 1 : 0;
-                                break;
-                            case 'ArrowLeft': if (currentCol > 0) nextCol = currentCol - 1;
-                                break;
-                            case 'ArrowRight': if (currentCol < focusableGrid[currentRow].length - 1) nextCol = currentCol + 1;
-                                break;
-                            default: return ;
-                        }
-                        if (key === 'ArrowUp' || key === 'ArrowDown') {
-                            nextCol = Math.min(currentCol, focusableGrid[nextRow].length - 1);
-                        }
-                        const nextId = focusableGrid[nextRow]?.[nextCol];
-                        if (nextId) {
-                            const nextElement = document.getElementById(nextId);
-                            if (nextElement) nextElement.focus();
-                        }
-                    };
+                        useEffect(() => {
+                            if (selectedItemId && document.activeElement?.id !== `item-${selectedItemId}`) {
+                                const el = document.getElementById(`item-${selectedItemId}`);
+                                if (el) el.focus();
+                            }
+                        }, [selectedItemId]);
 
-                    useEffect(() => {
-                        if (lastManuallySelectedId.current) {
-                            const el = document.getElementById(`item-${lastManuallySelectedId.current}`);
-                            if (el) el.focus();
-                            lastManuallySelectedId.current = null;
-                        }
-                        if (lastMovedTierId.current) {
-                            const el = document.getElementById(`tier-label-${lastMovedTierId.current}`);
-                            if (el) el.focus();
-                            lastMovedTierId.current = null;
-                        }
-                    }, [items, tiers]);
-
-                    useEffect(() => {
-                        if (selectedItemId && document.activeElement?.id !== `item-${selectedItemId}`) {
-                            const el = document.getElementById(`item-${selectedItemId}`);
-                            if (el) el.focus();
-                        }
-                    }, [selectedItemId]);
-
-                    const handleResizeMouseDown = (e) => {
-                        e.preventDefault();
-                        setIsResizing(true);
-                    };
-
-                    useEffect(() => {
-                        const handleMouseMove = (e) => {
-                            if (!isResizing) return ;
-                            const containerRect = appContainerRef.current.getBoundingClientRect();
-                            const newWidthPercent = ((e.clientX - containerRect.left) / containerRect.width) * 100;
-                            // Constrain the panel width between 50% and 80% for the tier list
-                            const constrainedWidth = Math.max(50, Math.min(80, newWidthPercent));
-                            setTierListPanelWidth(constrainedWidth);
+                        const handleResizeMouseDown = (e) => {
+                            e.preventDefault();
+                            setIsResizing(true);
                         };
 
-                        const handleMouseUp = () => {
-                            setIsResizing(false);
+                        useEffect(() => {
+                            const handleMouseMove = (e) => {
+                                if (!isResizing) return ;
+                                const containerRect = appContainerRef.current.getBoundingClientRect();
+                                const newWidthPercent = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+                                // Constrain the panel width between 50% and 80% for the tier list
+                                const constrainedWidth = Math.max(50, Math.min(80, newWidthPercent));
+                                setTierListPanelWidth(constrainedWidth);
+                            };
+
+                            const handleMouseUp = () => {
+                                setIsResizing(false);
+                            };
+
+                            if (isResizing) {
+                                window.addEventListener('mousemove', handleMouseMove);
+                                window.addEventListener('mouseup', handleMouseUp);
+                            }
+
+                            return () => {
+                                window.removeEventListener('mousemove', handleMouseMove);
+                                window.removeEventListener('mouseup', handleMouseUp);
+                            };
+                        }, [isResizing]);
+
+                        useEffect(() => {
+                            const handleMouseMove = (e) => {
+                                if (!isResizingTierLabel) return;
+                                const dx = e.clientX - resizeTierLabelInfo.current.startX;
+                                const newWidth = resizeTierLabelInfo.current.startWidth + dx;
+                                const constrainedWidth = Math.max(60, Math.min(500, newWidth));
+                                setTierLabelWidth(constrainedWidth);
+                            };
+
+                            const handleMouseUp = () => {
+                                setIsResizingTierLabel(false);
+                            };
+
+                            if (isResizingTierLabel) {
+                                document.body.style.cursor = 'col-resize';
+                                window.addEventListener('mousemove', handleMouseMove);
+                                window.addEventListener('mouseup', handleMouseUp);
+                            } else {
+                                document.body.style.cursor = '';
+                            }
+
+                            return () => {
+                                document.body.style.cursor = '';
+                                window.removeEventListener('mousemove', handleMouseMove);
+                                window.removeEventListener('mouseup', handleMouseUp);
+                            };
+                        }, [isResizingTierLabel]);
+
+                        const theme = {
+                            darkMode,
+                            bg: darkMode ? 'bg-black' : 'bg-gray-100',
+                            text: darkMode ? 'text-gray-100' : 'text-gray-900',
+                            containerBg: darkMode ? 'bg-gray-800' : 'bg-white',
+                            itemBg: darkMode ? 'bg-gray-700' : 'bg-gray-50',
+                            inputBg: darkMode ? 'bg-gray-700' : 'bg-gray-50',
+                            inputText: darkMode ? 'text-gray-200' : 'text-gray-800',
+                            placeholderText: darkMode ? 'placeholder-gray-400' : 'placeholder-gray-500',
+                            borderColor: darkMode ? 'border-gray-600' : 'border-gray-300',
+                            buttonPrimaryBg: darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600',
+                            buttonSecondaryBg: darkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-500 hover:bg-gray-600',
+                            buttonText: 'text-white',
+                            sectionBg: darkMode ? 'bg-gray-800' : 'bg-white',
+                        };
+                        const dragState = {
+                            draggedItemId,
+                            draggedTierId,
+                            draggedOverItemId,
+                            draggedOverTierRowId,
+                            draggedOverTierAreaId,
+                            selectedItemId,
+                            selectedTierId
+                        };
+                        const itemProps = {
+                            itemWidth,
+                            itemHeight,
+                            tierLabelWidth
+                        };
+                        const itemSetters = {
+                            setItemWidth,
+                            setItemHeight,
+                            setTierLabelWidth
+                        };
+                        const allHandlers = {
+                            handleItemDragStart,
+                            handleTierLabelDragStart,
+                            handleDragOver,
+                            handleTierRowDragOver,
+                            handleTierRowDragLeave,
+                            handleTierAreaDragEnter,
+                            handleTierAreaDragLeave,
+                            handleItemDragEnter,
+                            handleItemDragLeave,
+                            handleDrop,
+                            cleanupDragStates,
+                            handleDeleteItem,
+                            handleDeleteTier,
+                            startEditingTier,
+                            handleAddItem,
+                            handlePasteItems,
+                            handleResetAllItemsToPool,
+                            handleSaveEditedTier,
+                            cancelEditingTier,
+                            handleExportState,
+                            handleImportState,
+                            handleItemImageUpload,
+                            handleExportImage,
+                            handleItemClick,
+                            handleTierClick,
+                            handleClearAllData,
+                            handleNewTierList,
+                            handleExportAllStates,
+                            handleOpenTierList,
+                            handleAddTier,
+                            handleTouchStart,
+                            handleUpdateTierText,
+                            handleTierLabelResizeStart,
+                        };
+                        const uiState = { showConfiguration, editingTierId };
+                        const uiSetters = {
+                            setShowConfiguration,
+                            handleSelectFirstItemInPool
+                        };
+                        const data = { standardColors };
+                        const editState = {
+                            editingTierLabel,
+                            editingTierColor,
+                            newTierColor
+                        };
+                        const editSetters = {
+                            setEditingTierLabel,
+                            setEditingTierColor,
+                            setNewTierColor
+                        };
+                        const refs = {
+                            newTierNameRef,
+                            newItemNameRef,
+                            newItemImageFileRef,
+                            newItemImageUrlRef,
+                            pasteItemsRef,
+                            importFileRef
                         };
 
-                        if (isResizing) {
-                            window.addEventListener('mousemove', handleMouseMove);
-                            window.addEventListener('mouseup', handleMouseUp);
-                        }
+                        const isSideLayout = poolPosition === 'right';
 
-                        return () => {
-                            window.removeEventListener('mousemove', handleMouseMove);
-                            window.removeEventListener('mouseup', handleMouseUp);
-                        };
-                    }, [isResizing]);
+                        return (
+                            <div
+                                className={`min-h-screen font-sans transition-colors duration-300 ${
+                                theme.bg
+                                } ${
+                                theme.text
+                                }`}
+                            >
+                                <DragPreview
+                                    item={touchInfo.itemData}
+                                    itemWidth={itemWidth}
+                                    itemHeight={itemHeight}
+                                    position={touchInfo.itemId ? {
+                                        x: touchInfo.currentX - touchInfo.offsetX,
+                                        y: touchInfo.currentY - touchInfo.offsetY
+                                    } : null}
+                                    theme={theme}
+                                />
+                                {showCommandsPopover && <CommandsPopover theme={theme} onClose={() => setShowCommandsPopover(false)}/>}
+                                {showClearDataModal && <ConfirmationModal theme={theme} onConfirm={confirmClearAllData} onCancel={() => setShowClearDataModal(false)} title="Clear All Data?" message="This will permanently delete all tiers and items from your browser's storage and cannot be undone."/>}
+                                {showOpenModal && <OpenTierListModal theme={theme} onClose={() => setShowOpenModal(false)}/>}
+                                <div aria-live="assertive" style={{
+                                        position: 'absolute',
+                                        width: '1px',
+                                        height: '1px',
+                                        padding: '0',
+                                        margin: '-1px',
+                                        overflow: 'hidden',
+                                        clip: 'rect(0, 0, 0, 0)',
+                                        whiteSpace: 'nowrap',
+                                        border: '0'
+                                    }}>{announcement}</div>
 
-                    useEffect(() => {
-                        const handleMouseMove = (e) => {
-                            if (!isResizingTierLabel) return;
-                            const dx = e.clientX - resizeTierLabelInfo.current.startX;
-                            const newWidth = resizeTierLabelInfo.current.startWidth + dx;
-                            const constrainedWidth = Math.max(60, Math.min(500, newWidth));
-                            setTierLabelWidth(constrainedWidth);
-                        };
+                                <div ref={appContainerRef} className="mx-auto max-w-full flex flex-col gap-1 p-1">
+                                    <div className={`relative ${theme.containerBg}`}>
+                                        <button
+                                            onClick={() => setShowCommandsPopover(true)}
+                                            className={`absolute top-4 right-4 p-2 rounded-full z-20 ${
+                                            theme.darkMode ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-500 hover:bg-gray-200 hover:text-black'
+                                            }`}
+                                            aria-label="Show keyboard commands"
+                                        >
+                                            <HelpCircleIcon size={28}/>
+                                        </button>
+                                        <input type="text" value={tierListTitle} onChange={(e) => setTierListTitle(e.target.value)} className={`text-3xl sm:text-4xl font-extrabold bg-transparent border-none focus:outline-none focus:ring-0 text-center w-full p-4 ${
+                                        theme.text
+                                        }`} aria-label="Tier list title"/>
+                                    </div>
 
-                        const handleMouseUp = () => {
-                            setIsResizingTierLabel(false);
-                        };
-
-                        if (isResizingTierLabel) {
-                            document.body.style.cursor = 'col-resize';
-                            window.addEventListener('mousemove', handleMouseMove);
-                            window.addEventListener('mouseup', handleMouseUp);
-                        } else {
-                            document.body.style.cursor = '';
-                        }
-
-                        return () => {
-                            document.body.style.cursor = '';
-                            window.removeEventListener('mousemove', handleMouseMove);
-                            window.removeEventListener('mouseup', handleMouseUp);
-                        };
-                    }, [isResizingTierLabel]);
-
-                    const theme = {
-                        darkMode,
-                        bg: darkMode ? 'bg-black' : 'bg-gray-100',
-                        text: darkMode ? 'text-gray-100' : 'text-gray-900',
-                        containerBg: darkMode ? 'bg-gray-800' : 'bg-white',
-                        itemBg: darkMode ? 'bg-gray-700' : 'bg-gray-50',
-                        inputBg: darkMode ? 'bg-gray-700' : 'bg-gray-50',
-                        inputText: darkMode ? 'text-gray-200' : 'text-gray-800',
-                        placeholderText: darkMode ? 'placeholder-gray-400' : 'placeholder-gray-500',
-                        borderColor: darkMode ? 'border-gray-600' : 'border-gray-300',
-                        buttonPrimaryBg: darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600',
-                        buttonSecondaryBg: darkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-500 hover:bg-gray-600',
-                        buttonText: 'text-white',
-                        sectionBg: darkMode ? 'bg-gray-800' : 'bg-white',
-                    };
-                    const dragState = {
-                        draggedItemId,
-                        draggedTierId,
-                        draggedOverItemId,
-                        draggedOverTierRowId,
-                        draggedOverTierAreaId,
-                        selectedItemId,
-                        selectedTierId
-                    };
-                    const itemProps = {
-                        itemWidth,
-                        itemHeight,
-                        tierLabelWidth
-                    };
-                    const itemSetters = {
-                        setItemWidth,
-                        setItemHeight,
-                        setTierLabelWidth
-                    };
-                    const allHandlers = {
-                        handleItemDragStart,
-                        handleTierLabelDragStart,
-                        handleDragOver,
-                        handleTierRowDragOver,
-                        handleTierRowDragLeave,
-                        handleTierAreaDragEnter,
-                        handleTierAreaDragLeave,
-                        handleItemDragEnter,
-                        handleItemDragLeave,
-                        handleDrop,
-                        cleanupDragStates,
-                        handleDeleteItem,
-                        handleDeleteTier,
-                        startEditingTier,
-                        handleAddItem,
-                        handlePasteItems,
-                        handleResetAllItemsToPool,
-                        handleSaveEditedTier,
-                        cancelEditingTier,
-                        handleExportState,
-                        handleImportState,
-                        handleItemImageUpload,
-                        handleExportImage,
-                        handleItemClick,
-                        handleTierClick,
-                        handleClearAllData,
-                        handleNewTierList,
-                        handleExportAllStates,
-                        handleOpenTierList,
-                        handleAddTier,
-                        handleTouchStart,
-                        handleUpdateTierText,
-                        handleTierLabelResizeStart,
-                    };
-                    const uiState = { showConfiguration, editingTierId };
-                    const uiSetters = {
-                        setShowConfiguration,
-                        handleSelectFirstItemInPool
-                    };
-                    const data = { standardColors };
-                    const editState = {
-                        editingTierLabel,
-                        editingTierColor,
-                        newTierColor
-                    };
-                    const editSetters = {
-                        setEditingTierLabel,
-                        setEditingTierColor,
-                        setNewTierColor
-                    };
-                    const refs = {
-                        newTierNameRef,
-                        newItemNameRef,
-                        newItemImageFileRef,
-                        newItemImageUrlRef,
-                        pasteItemsRef,
-                        importFileRef
-                    };
-
-                    const isSideLayout = poolPosition === 'right';
-
-                    return (
-                        <div
-                            className={`min-h-screen font-sans transition-colors duration-300 ${
-                            theme.bg
-                            } ${
-                            theme.text
-                            }`}
-                        >
-                            <DragPreview
-                                item={touchInfo.itemData}
-                                itemWidth={itemWidth}
-                                itemHeight={itemHeight}
-                                position={touchInfo.itemId ? {
-                                    x: touchInfo.currentX - touchInfo.offsetX,
-                                    y: touchInfo.currentY - touchInfo.offsetY
-                                } : null}
-                                theme={theme}
-                            />
-                            {showCommandsPopover && <CommandsPopover theme={theme} onClose={() => setShowCommandsPopover(false)}/>}
-                            {showClearDataModal && <ConfirmationModal theme={theme} onConfirm={confirmClearAllData} onCancel={() => setShowClearDataModal(false)} title="Clear All Data?" message="This will permanently delete all tiers and items from your browser's storage and cannot be undone."/>}
-                            {showOpenModal && <OpenTierListModal theme={theme} onClose={() => setShowOpenModal(false)}/>}
-                            <div aria-live="assertive" style={{
-                                    position: 'absolute',
-                                    width: '1px',
-                                    height: '1px',
-                                    padding: '0',
-                                    margin: '-1px',
-                                    overflow: 'hidden',
-                                    clip: 'rect(0, 0, 0, 0)',
-                                    whiteSpace: 'nowrap',
-                                    border: '0'
-                                }}>{announcement}</div>
-
-                            <div ref={appContainerRef} className="mx-auto max-w-full flex flex-col gap-1 p-1">
-                                <div className={`relative ${theme.containerBg}`}>
-                                    <button
-                                        onClick={() => setShowCommandsPopover(true)}
-                                        className={`absolute top-4 right-4 p-2 rounded-full z-20 ${
-                                        theme.darkMode ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-500 hover:bg-gray-200 hover:text-black'
-                                        }`}
-                                        aria-label="Show keyboard commands"
-                                    >
-                                        <HelpCircleIcon size={28}/>
-                                    </button>
-                                    <input type="text" value={tierListTitle} onChange={(e) => setTierListTitle(e.target.value)} className={`text-3xl sm:text-4xl font-extrabold bg-transparent border-none focus:outline-none focus:ring-0 text-center w-full p-4 ${
-                                    theme.text
-                                    }`} aria-label="Tier list title"/>
-                                </div>
-
-                                <div className={`flex ${
-                                isSideLayout ? 'flex-row' : 'flex-col gap-1'
-                                }`}>
-                                    <div
-                                        className="tier-list-container"
-                                        style={isSideLayout ? { width: `${tierListPanelWidth}%` } : { width: '100%' }}
-                                    >
-                                        <div ref={tierListRef} className="w-full flex flex-col gap-1">
-                                            {tiers.map((tier, index) => (
-                                                <TierRow key={tier.id} tier={tier} items={items} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} deleteMode={deleteMode} selectedTierId={selectedTierId} inlineEditingTierId={inlineEditingTierId} setInlineEditingTierId={setInlineEditingTierId}/>
-                                            ))}
-                                        </div>
-                                        {!isSideLayout && (
-                                            <div className='mt-1'>
-                                                <ItemPool items={items} itemPoolTitle={itemPoolTitle} setItemPoolTitle={setItemPoolTitle} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} deleteMode={deleteMode} poolPosition={poolPosition} onTogglePosition={handleTogglePosition}/>
+                                    <div className={`flex ${
+                                    isSideLayout ? 'flex-row' : 'flex-col gap-1'
+                                    }`}>
+                                        <div
+                                            className="tier-list-container"
+                                            style={isSideLayout ? { width: `${tierListPanelWidth}%` } : { width: '100%' }}
+                                        >
+                                            <div ref={tierListRef} className="w-full flex flex-col gap-1">
+                                                {tiers.map((tier, index) => (
+                                                    <TierRow key={tier.id} tier={tier} items={items} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} deleteMode={deleteMode} selectedTierId={selectedTierId} inlineEditingTierId={inlineEditingTierId} setInlineEditingTierId={setInlineEditingTierId}/>
+                                                ))}
                                             </div>
+                                            {!isSideLayout && (
+                                                <div className='mt-1'>
+                                                    <ItemPool items={items} itemPoolTitle={itemPoolTitle} setItemPoolTitle={setItemPoolTitle} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} deleteMode={deleteMode} poolPosition={poolPosition} onTogglePosition={handleTogglePosition}/>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {isSideLayout && (
+                                            <>
+                                                <div onMouseDown={handleResizeMouseDown} className={`w-1 cursor-col-resize flex-shrink-0 ${
+                                                theme.bg
+                                                } hover:bg-blue-500/50 transition-colors`}></div>
+                                                <div
+                                                    className="item-pool-container"
+                                                    style={{
+                                                        width: `${100 - tierListPanelWidth}%`
+                                                    }}
+                                                >
+                                                    <ItemPool items={items} itemPoolTitle={itemPoolTitle} setItemPoolTitle={setItemPoolTitle} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} deleteMode={deleteMode} poolPosition={poolPosition} onTogglePosition={handleTogglePosition}/>
+                                                </div>
+                                            </>
                                         )}
                                     </div>
 
-                                    {isSideLayout && (
-                                        <>
-                                            <div onMouseDown={handleResizeMouseDown} className={`w-1 cursor-col-resize flex-shrink-0 ${
-                                            theme.bg
-                                            } hover:bg-blue-500/50 transition-colors`}></div>
-                                            <div
-                                                className="item-pool-container"
-                                                style={{
-                                                    width: `${100 - tierListPanelWidth}%`
-                                                }}
-                                            >
-                                                <ItemPool items={items} itemPoolTitle={itemPoolTitle} setItemPoolTitle={setItemPoolTitle} theme={theme} dragState={dragState} handlers={allHandlers} itemProps={itemProps} deleteMode={deleteMode} poolPosition={poolPosition} onTogglePosition={handleTogglePosition}/>
-                                            </div>
-                                        </>
-                                    )}
+                                    <ConfigurationPanel theme={theme} uiState={uiState} uiSetters={uiSetters} data={data} dataHandlers={allHandlers} editState={editState} editSetters={editSetters} refs={refs} itemProps={itemProps} itemSetters={itemSetters} deleteMode={deleteMode} setDeleteMode={setDeleteMode} setContainerWidth={() => {}} toggleFullScreen={toggleFullScreen} setDarkMode={setDarkMode} isFullscreen={isFullscreen} darkMode={darkMode}/>
                                 </div>
-
-                                <ConfigurationPanel theme={theme} uiState={uiState} uiSetters={uiSetters} data={data} dataHandlers={allHandlers} editState={editState} editSetters={editSetters} refs={refs} itemProps={itemProps} itemSetters={itemSetters} deleteMode={deleteMode} setDeleteMode={setDeleteMode} setContainerWidth={() => {}} toggleFullScreen={toggleFullScreen} setDarkMode={setDarkMode} isFullscreen={isFullscreen} darkMode={darkMode}/>
                             </div>
-                        </div>
-                    );
-                }
+                        );
+                    }
 
-                ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+                    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
         </script>
     </body>
 </html>
-
