@@ -635,9 +635,7 @@
                                     aria-label="Item pool title"
                                 />
                             </div>
-                            <div className={`flex flex-wrap gap-2 justify-center sm:justify-start flex-grow ${
-                            isSideLayout ? 'overflow-y-auto p-2' : 'min-h-[100px]'
-                            }`}>
+                            <div className={`flex flex-wrap gap-2 justify-center sm:justify-start ${isSideLayout ? 'overflow-y-auto p-2 flex-grow' : ''}`}>
                                 {unassignedItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} selectedItemId={selectedItemId}/>)}
                             </div>
                             <div className="absolute bottom-4 right-4 flex gap-2">
@@ -2025,8 +2023,7 @@
                     // --- Touch Handlers ---
                     const handleTouchStart = (e, item) => {
                         if (e.touches.length !== 1) return ;
-                        // Prevent default behavior like scrolling or text selection
-                        e.preventDefault();
+
                         const touch = e.touches[0];
                         const rect = e.currentTarget.getBoundingClientRect();
 
@@ -2046,12 +2043,27 @@
 
                     useEffect(() => {
                         const handleTouchMove = (e) => {
-                            if (e.touches.length !== 1 || !touchInfo.itemId) return ;
+                            if (e.touches.length !== 1 || !touchInfo.itemId) return;
+
+                            // This preventDefault is important to stop the whole page from scrolling on mobile
+                            // while an item is being dragged.
                             e.preventDefault();
+
                             const touch = e.touches[0];
 
+                            // Auto-scroll logic for mobile drag
+                            const scrollThreshold = 80; // pixels from the edge to trigger scroll
+                            const scrollSpeed = 10; // pixels to scroll per frame
+
+                            if (touch.clientY < scrollThreshold) {
+                                window.scrollBy(0, -scrollSpeed);
+                            } else if (touch.clientY > window.innerHeight - scrollThreshold) {
+                                window.scrollBy(0, scrollSpeed);
+                            }
+
                             setTouchInfo(prev => ({
-                                ...prev, currentX: touch.clientX,
+                                ...prev,
+                                currentX: touch.clientX,
                                 currentY: touch.clientY
                             }));
 
@@ -2059,7 +2071,7 @@
                             if (!elementOver) {
                                 setDraggedOverItemId(null);
                                 setDraggedOverTierAreaId(null);
-                                return ;
+                                return;
                             }
 
                             const dropTargetItem = elementOver.closest(`[id^="item-"]`);
@@ -2083,7 +2095,7 @@
                         };
 
                         const handleTouchEnd = (e) => {
-                            if (!touchInfo.itemId) return ;
+                            if (!touchInfo.itemId) return;
 
                             const touch = e.changedTouches[0];
                             const elementOver = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -2608,3 +2620,4 @@
         </script>
     </body>
 </html>
+
