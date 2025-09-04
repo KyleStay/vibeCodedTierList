@@ -635,7 +635,7 @@
                                     aria-label="Item pool title"
                                 />
                             </div>
-                            <div className={`flex flex-wrap gap-2 justify-center sm:justify-start ${isSideLayout ? 'overflow-y-auto p-2 flex-grow' : ''}`}>
+                            <div className={`flex flex-wrap gap-2 justify-center sm:justify-start ${isSideLayout ? 'overflow-y-auto p-2' : ''}`}>
                                 {unassignedItems.map(item => <DraggableItem key={item.id} item={item} {...itemProps} theme={theme} deleteMode={deleteMode} draggedItemId={draggedItemId} draggedOverItemId={draggedOverItemId} handlers={handlers} selectedItemId={selectedItemId}/>)}
                             </div>
                             <div className="absolute bottom-4 right-4 flex gap-2">
@@ -2599,7 +2599,7 @@
                                             theme.bg
                                             } hover:bg-blue-500/50 transition-colors`}></div>
                                             <div
-                                                className="item-pool-container flex-grow"
+                                                className="item-pool-container"
                                                 style={{
                                                     width: `${100 - tierListPanelWidth}%`
                                                 }}
